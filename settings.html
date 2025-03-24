@@ -1,25 +1,22 @@
 <div class="text-to-image-converter-settings">
   <div class="inline-drawer">
     <div class="inline-drawer-toggle inline-drawer-header">
-      <b>이미지로 저장</b>
+      <b>로그 발췌</b>
       <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
     </div>
     <div class="inline-drawer-content">
-      <div class="text-to-image-converter_block">
-        <h4>프리셋</h4>
+      <div class="text-to-image-converter_block preset-container">
+        <h4>💾 프리셋</h4>
         <div class="flex-container">
-          <select id="preset_selector" class="text-to-image-select">
-            <option value="">선택된 프리셋 없음</option>
-          </select>
+          <input type="text" id="preset_name" placeholder="프리셋 이름" />
+          <button id="create_preset" class="text-to-image-btn">프리셋 추가</button>
+        </div>
+        <div class="flex-container">
+          <select id="preset_selector" class="text-to-image-select"></select>
           <div class="preset-buttons">
-            <button id="load_preset" class="text-to-image-btn">불러오기</button>
             <button id="save_preset" class="text-to-image-btn">저장</button>
             <button id="delete_preset" class="text-to-image-btn">삭제</button>
           </div>
-        </div>
-        <div class="flex-container">
-          <input type="text" id="preset_name" placeholder="새 프리셋 이름" />
-          <button id="create_preset" class="text-to-image-btn">새 프리셋 생성</button>
         </div>
       </div>
       <div class="text-to-image-converter_block flex-container">
@@ -33,11 +30,18 @@
       <div class="text-to-image-converter_block">
         <h4>단어 치환</h4>
         <div class="flex-container">
-          <label for="original_word">원래 단어:</label><input type="text" id="original_word" />
+          <input type="text" id="original_word_1" placeholder="원래 단어" /><input
+            type="text"
+            id="replacement_word_1"
+            placeholder="바꿀 단어"
+          />
         </div>
         <div class="flex-container">
-          <label for="replacement_word">바꿀 단어:</label
-          ><input type="text" id="replacement_word" />
+          <input type="text" id="original_word_2" placeholder="원래 단어" /><input
+            type="text"
+            id="replacement_word_2"
+            placeholder="바꿀 단어"
+          />
         </div>
         <div class="flex-container justify-center">
           <button id="apply_replacement" class="text-to-image-btn">적용</button>
