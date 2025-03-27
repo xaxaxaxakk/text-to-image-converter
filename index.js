@@ -98,6 +98,10 @@ function getPresetSettings() {
 }
 function createPreset() {
   const presetName = $("#preset_name").val().trim();
+  if (!presetName) {
+    alert("프리셋 이름을 입력하세요.");
+    return;
+  }
 
   const presets = extension_settings[extensionName].presets || {};
   if (presets[presetName]) {
