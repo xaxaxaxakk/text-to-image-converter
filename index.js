@@ -813,11 +813,11 @@ function generateTextImage(chunk, index) {
     const footerText = settings.footerText;
     if (footerText) {
       const footerColor = settings.footerColor || "#000000";
-      ctx.font = "15px Pretendard-Regular";
+      ctx.font = "14px Pretendard-Regular";
       ctx.fillStyle = footerColor;
       ctx.textAlign = "right";
-      const footerY = height - 40;
-      ctx.fillText(footerText, width - 40, footerY);
+      const footerY = height - 35;
+      ctx.fillText(footerText, width - 35, footerY);
     }
   };
 
