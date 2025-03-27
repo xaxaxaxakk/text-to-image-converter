@@ -136,10 +136,14 @@ input#preset_name {
 .justify-center {
   justify-content: flex-end !important;
 }
+#clear_replace {
+  margin-right: auto;
+}
 #apply_replacement:hover {
   background: #007bff;
 }
-#restore_text:hover {
+#restore_text:hover,
+#clear_replace:hover {
   background: #cc0000;
 }
 

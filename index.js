@@ -145,8 +145,42 @@ function deletePreset() {
   const presetName = $("#preset_selector").val();
   const presets = extension_settings[extensionName].presets;
   delete presets[presetName];
+
   if (extension_settings[extensionName].currentPreset === presetName) {
     extension_settings[extensionName].currentPreset = null;
+
+    extension_settings[extensionName] = {
+      ...defaultSettings,
+      presets: extension_settings[extensionName].presets,
+      currentPreset: null,
+    };
+
+    $("#text_image_font_family").val(defaultSettings.fontFamily);
+    $("#text_image_font_size").val(defaultSettings.fontSize);
+    $("#text_image_font_color").val(defaultSettings.fontColor);
+    $("#text_image_stroke_width").val(defaultSettings.strokeWidth);
+    $("#text_image_ratio").val(defaultSettings.imageRatio);
+    $("#bg_blur").val(defaultSettings.bgBlur);
+    $("#bg_grayscale").val(defaultSettings.bgGrayscale);
+    $("#bg_noise").val(defaultSettings.bgNoise);
+    $("#overlay_opacity").val(defaultSettings.overlayOpacity);
+    $("#overlay_color").val(defaultSettings.overlayColor);
+    $("#original_word_1").val("");
+    $("#replacement_word_1").val("");
+    $("#original_word_2").val("");
+    $("#replacement_word_2").val("");
+    $("#original_word_3").val("");
+    $("#replacement_word_3").val("");
+    $("#original_word_4").val("");
+    $("#replacement_word_4").val("");
+    $("#use_background_color").prop("checked", defaultSettings.useBackgroundColor);
+    $("#background_color").val(defaultSettings.backgroundColor);
+    $(".bg-image-item").removeClass("selected");
+    $(`.bg-image-item[data-path="${defaultSettings.selectedBackgroundImage}"]`).addClass(
+      "selected"
+    );
+    $("#footer_text").val("");
+    $("#footer_color").val(defaultSettings.footerColor);
   }
   saveSettings();
   updatePresetSelector();
@@ -1055,5 +1089,11 @@ jQuery(async () => {
   $("#clear_text_btn").on("click", () => {
     $("#text_to_image").val("");
     refreshPreview();
+  });
+  $("#create_preset").on("click", () => {
+    $("#preset_name").val("");
+  });
+  $("#clear_replace").on("click", () => {
+    $(".replacer_box").val("");
   });
 });
