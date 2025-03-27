@@ -119,8 +119,11 @@ function savePreset() {
 }
 function renamePreset() {
   const oldName = $("#preset_selector").val();
-  let newName = prompt("프리셋 이름 재설정", oldName);
+  if (oldName === "nonePreset") {
+    return;
+  }
 
+  let newName = prompt("프리셋 이름 재설정", oldName);
   if (!newName || newName.trim() === "") {
     return;
   }
