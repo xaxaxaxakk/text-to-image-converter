@@ -1093,6 +1093,9 @@ jQuery(async () => {
     });
   });
 
+  $("#how_to_use").on("click", () => {
+    $(".how_to_use_box").slideToggle();
+  });
   $("#clear_text_btn").on("click", () => {
     $("#text_to_image").val("");
     refreshPreview();

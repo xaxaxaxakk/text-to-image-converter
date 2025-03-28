@@ -7,7 +7,6 @@
   background-color: #fff;
   color: #222;
   font-size: 16px !important;
-  cursor: pointer !important;
   box-sizing: border-box;
 
   &:not(.toggle) {
@@ -15,25 +14,78 @@
     padding-bottom: 15px;
     border-bottom: 3px solid #5c6f7c !important;
   }
+
+  &.toggle {
+    cursor: pointer !important;
+  }
 }
 .text-to-image-converter-settings h5 {
   width: 100%;
   height: auto !important;
-  font-size: 15px !important;
   margin-top: 15px;
+  font-size: 15px !important;
 
   & > i {
     margin-right: 10px;
   }
 }
 .text-to-image-converter-settings .inline-drawer-content {
-  margin-top: 30px;
+  display: flex !important;
+  flex-direction: column;
+}
+
+/* how to use */
+#how_to_use {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 10px 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fff !important;
+  cursor: pointer !important;
+  transition: border-color 0.3s;
+  align-self: flex-end;
+  &:hover {
+    border-color: rgb(255, 153, 0);
+  }
+  & i {
+    margin-right: 5px;
+    color: rgb(255, 153, 0);
+    vertical-align: top;
+  }
+}
+.how_to_use_box {
+  display: none;
+  padding: 10px 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fff !important;
+
+  & > span {
+    margin: 16px 0;
+    padding: 15px;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    border-left: 5px solid #007bff;
+  }
+  & span {
+    display: block !important;
+    line-height: 1.3rem;
+
+    & > span {
+      border: 1px solid #eee;
+      background-color: #fff;
+      border-radius: 5px;
+      padding: 10px;
+      margin-top: 10px;
+    }
+  }
 }
 
 .text-to-image-converter-settings .inline-drawer-content > .flex-container {
   flex-direction: row !important;
   align-items: center;
-  margin: 30px 0;
+  margin: 10px 0;
   padding: 15px;
   border: 1px solid #ddd;
   border-radius: 8px;
@@ -153,9 +205,9 @@ input#preset_name {
   align-items: center;
 
   &:first-of-type {
-    border-top: 3px solid #5c6f7c !important;
     margin-top: 10px !important;
     padding-top: 15px !important;
+    border-top: 3px solid #5c6f7c !important;
   }
 }
 .flex-container:has(> .toggle) > div > *:not(input[type="range"]) {
@@ -213,7 +265,7 @@ input[type="text"] {
   border: 1px solid #ddd;
   border-radius: 8px;
   background: white;
-  gap: 10px;
+  gap: 6px;
   overflow-y: auto;
 }
 #custom_background_gallery:empty {
@@ -221,9 +273,8 @@ input[type="text"] {
 }
 .bg-image-item {
   position: relative;
-  width: calc(100% / 4 - 10px);
+  width: calc(100% / 4 - 6px);
   height: auto;
-  border-radius: 4px;
   overflow: hidden;
   cursor: pointer;
   transition: border-color 0.3s;
@@ -234,7 +285,7 @@ input[type="text"] {
   box-sizing: border-box;
 }
 .bg-image-item:nth-child(4n + 1) {
-  margin-left: 5px;
+  margin-left: 3px;
 }
 .bg-image-item.selected {
   outline-color: #007bff !important;
@@ -256,8 +307,8 @@ input[type="text"] {
   border: 1px solid #ddd;
   border-radius: 8px;
   background-color: #fff;
-  cursor: pointer;
   text-align: center !important;
+  cursor: pointer;
   transition: background-color 0.3s, color 0.3s;
 }
 .custom-bg-upload label:hover {
@@ -355,16 +406,16 @@ input[type="text"] {
 }
 @font-face {
   font-family: "ChosunGu";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@1.0/ChosunGu.woff")
     format("woff");
-  font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: "ChosunSg";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@1.0/ChosunSg.woff")
     format("woff");
-  font-weight: normal;
   font-style: normal;
 }
 @font-face {
@@ -493,50 +544,50 @@ input[type="text"] {
 }
 @font-face {
   font-family: "Ownglyph_ParkDaHyun";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2411-3@1.0/Ownglyph_ParkDaHyun.woff2")
     format("woff2");
-  font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: "Uiyeun";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2105@1.1/Uiyeun.woff")
     format("woff");
-  font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: "Yoonwoo";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2105@1.1/Yoonwoo.woff")
     format("woff");
-  font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: "Ownglyph_ryuttung-Rg";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2405-2@1.0/Ownglyph_ryuttung-Rg.woff2")
     format("woff2");
-  font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: "GowunDodum-Regular";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2108@1.1/GowunDodum-Regular.woff")
     format("woff");
-  font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: "SF_HambakSnow";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2106@1.1/SF_HambakSnow.woff")
     format("woff");
-  font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: "LeeSeoyun";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2202-2@1.0/LeeSeoyun.woff")
     format("woff");
-  font-weight: normal;
   font-style: normal;
 }
