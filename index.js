@@ -7,6 +7,7 @@ const defaultSettings = {
   fontFamily: "Pretendard-Regular",
   fontWeight: "normal",
   fontSize: "24px",
+  fontAlign: "left",
   fontColor: "#000000",
   strokeWidth: "0",
   selectedBackgroundImage: `${extensionFolderPath}/default-backgrounds/bg40.png`,
@@ -29,6 +30,7 @@ async function initSettings() {
   const {
     fontFamily,
     fontSize,
+    fontAlign,
     fontColor,
     strokeWidth,
     imageRatio,
@@ -46,6 +48,7 @@ async function initSettings() {
 
   $("#text_image_font_family").val(fontFamily);
   $("#text_image_font_size").val(fontSize);
+  $("#text_image_font_align").val(fontAlign);
   $("#text_image_font_color").val(fontColor);
   $("#text_image_stroke_width").val(strokeWidth);
   $("#text_image_ratio").val(imageRatio);
@@ -164,6 +167,7 @@ function deletePreset() {
 
     $("#text_image_font_family").val(defaultSettings.fontFamily);
     $("#text_image_font_size").val(defaultSettings.fontSize);
+    $("#text_image_font_align").val(defaultSettings.fontAlign);
     $("#text_image_font_color").val(defaultSettings.fontColor);
     $("#text_image_stroke_width").val(defaultSettings.strokeWidth);
     $("#text_image_ratio").val(defaultSettings.imageRatio);
@@ -203,6 +207,7 @@ function selectPreset() {
 
     $("#text_image_font_family").val(defaultSettings.fontFamily);
     $("#text_image_font_size").val(defaultSettings.fontSize);
+    $("#text_image_font_align").val(defaultSettings.fontAlign);
     $("#text_image_font_color").val(defaultSettings.fontColor);
     $("#text_image_stroke_width").val(defaultSettings.strokeWidth);
     $("#text_image_ratio").val(defaultSettings.imageRatio);
@@ -275,6 +280,9 @@ function applyPreset(presetName) {
         break;
       case "fontSize":
         $("#text_image_font_size").val(value);
+        break;
+      case "fontAlign":
+        $("#text_image_font_align").val(value);
         break;
       case "fontColor":
         $("#text_image_font_color").val(value);
@@ -581,6 +589,11 @@ function fontSize(event) {
   saveSettings();
   refreshPreview();
 }
+function fontAlign(event) {
+  extension_settings[extensionName].fontAlign = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
 function fontColor(event) {
   extension_settings[extensionName].fontColor = event.target.value;
   saveSettings();
@@ -774,16 +787,32 @@ function generateTextImage(chunk, index) {
       40 + lineHeight / 2
     );
 
+    ctx.fontAlign = settings.fontAlign || "left";
     chunk.forEach((line) => {
-      let x = 40;
+      let totalTextWidth = 0;
       line.forEach((span) => {
         ctx.font = `${
           span.bold ? "bold" : span.italic ? "italic" : settings.fontWeight
         } ${fontSize}px ${settings.fontFamily}`;
-        const textWidth = ctx.measureText(span.text + " ").width;
+        totalTextWidth += ctx.measureText(span.text + " ").width;
+      });
+
+      let x;
+      if (settings.fontAlign === "center") {
+        x = (width - totalTextWidth) / 2;
+      } else if (settings.fontAlign === "right") {
+        const rightMargin = 40;
+        x = width - totalTextWidth - rightMargin;
+      } else {
+        x = 40;
+      }
+      line.forEach((span) => {
+        ctx.font = `${
+          span.bold ? "bold" : span.italic ? "italic" : settings.fontWeight
+        } ${fontSize}px ${settings.fontFamily}`;
         if (strokeWidth > 0) ctx.strokeText(span.text, x, y);
         ctx.fillText(span.text, x, y);
-        x += textWidth;
+        x += ctx.measureText(span.text + " ").width;
       });
       y += lineHeight;
     });
@@ -1070,6 +1099,7 @@ jQuery(async () => {
 
   $("#text_image_font_family").on("change", fontFamily);
   $("#text_image_font_size").on("change", fontSize);
+  $("#text_image_font_align").on("change", fontAlign);
   $("#text_image_font_color").on("change", fontColor);
   $("#text_image_stroke_width").on("change", strokeWidth);
   $("#text_image_ratio").on("change", aspectRatio);
@@ -1091,10 +1121,6 @@ jQuery(async () => {
     $this.on("click", function () {
       $siblings.slideToggle();
     });
-  });
-
-  $("#how_to_use").on("click", () => {
-    $(".how_to_use_box").slideToggle();
   });
   $("#clear_text_btn").on("click", () => {
     $("#text_to_image").val("");
