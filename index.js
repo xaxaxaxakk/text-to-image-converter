@@ -985,6 +985,20 @@ function setupImageConvertButton() {
   let selectedText = "";
   let selectedMesBlock = null;
   let timeout;
+  let clearSelectionTimeout;
+
+  function allClearSelection() {
+    clearTimeout(clearSelectionTimeout);
+    selectedText = "";
+    selectedMesBlock = null;
+  }
+
+  function startClearSelectionTimer() {
+    clearTimeout(clearSelectionTimeout);
+    clearSelectionTimeout = setTimeout(() => {
+      allClearSelection();
+    }, 15000);
+  }
 
   function updateSelection() {
     const selection = window.getSelection();
@@ -994,9 +1008,21 @@ function setupImageConvertButton() {
       selectedMesBlock = $(selection.anchorNode).closest(".mes");
     }
   }
-  $(document).on("selectionchange", function (e) {
+  $(document).on("selectionchange", function () {
     clearTimeout(timeout);
-    timeout = setTimeout(updateSelection, 100);
+    timeout = setTimeout(() => {
+      const selection = window.getSelection();
+      const selectedString = selection.toString().trim();
+
+      if (selectedString) {
+        selectedText = selectedString;
+        selectedMesBlock = $(selection.anchorNode).closest(".mes");
+        startClearSelectionTimer();
+      }
+    }, 100);
+  });
+  $(document).on("click", "#image_preview_container .download-btn", function () {
+    allClearSelection();
   });
   function createImageConvertButton($mesBlock) {
     const $button = $("<div>")
@@ -1015,8 +1041,7 @@ function setupImageConvertButton() {
             : $mesBlock.find(".mes_text")[0].innerText;
         if (text) {
           setExtractText(text);
-          selectedText = "";
-          selectedMesBlock = null;
+          allClearSelection();
           window.getSelection().removeAllRanges();
         }
       });
