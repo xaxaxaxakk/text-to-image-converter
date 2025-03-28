@@ -924,6 +924,7 @@ function setupImageConvertButton() {
   let selectedText = "";
   let selectedMesBlock = null;
   let timeout;
+  let clearSelectionTimeout;
 
   function updateSelection() {
     const selection = window.getSelection();
@@ -931,6 +932,16 @@ function setupImageConvertButton() {
     if (selectedString) {
       selectedText = selectedString;
       selectedMesBlock = $(selection.anchorNode).closest(".mes");
+
+      if (clearSelectionTimeout) {
+        clearTimeout(clearSelectionTimeout);
+      }
+
+      clearSelectionTimeout = setTimeout(() => {
+        selectedText = "";
+        selectedMesBlock = null;
+        window.getSelection().removeAllRanges();
+      }, 4000);
     }
   }
   $(document).on("selectionchange", function (e) {
@@ -957,6 +968,9 @@ function setupImageConvertButton() {
           selectedText = "";
           selectedMesBlock = null;
           window.getSelection().removeAllRanges();
+          if (clearSelectionTimeout) {
+            clearTimeout(clearSelectionTimeout);
+          }
         }
       });
 
