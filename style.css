@@ -1,39 +1,50 @@
 .text-to-image-converter-settings {
   color: #222;
+}
+.text-to-image-converter-settings h4 {
+  width: 100%;
+  background-color: #fff;
+  color: #222;
+  font-size: 16px !important;
+  cursor: pointer !important;
+  box-sizing: border-box;
 
-  & h4 {
-    width: 100%;
+  &:not(.toggle) {
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 3px solid #5c6f7c !important;
+  }
+}
+.text-to-image-converter-settings h5 {
+  width: 100%;
+  height: auto !important;
+  font-size: 15px !important;
+  margin-top: 15px;
 
-    background-color: #fff;
-    color: #222;
-    font-size: 16px !important;
+  & > i {
+    margin-right: 10px;
+  }
+}
+.text-to-image-converter-settings .inline-drawer-content {
+  margin-top: 30px;
+}
+
+.text-to-image-converter-settings .inline-drawer-content {
+  & > .flex-container {
+    flex-direction: row !important;
+    align-items: center;
+    margin: 10px 0;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #fff !important;
     box-sizing: border-box;
 
-    &:not(.toggle) {
-      margin-bottom: 15px;
-      padding-bottom: 15px;
-      border-bottom: 3px solid #5c6f7c !important;
+    & > .flex-container {
+      flex-direction: row !important;
+      width: 100% !important;
+      margin-top: 10px;
     }
-
-    &.toggle {
-      cursor: pointer !important;
-    }
-  }
-
-  & h5 {
-    width: 100%;
-    height: auto !important;
-    margin-top: 15px;
-    font-size: 15px !important;
-
-    & > i {
-      margin-right: 10px;
-    }
-  }
-
-  & .inline-drawer-content {
-    display: flex !important;
-    flex-direction: column;
   }
 
   /* how to use */
@@ -80,25 +91,6 @@
         border: 1px solid #eee;
         border-radius: 5px;
         background-color: #fff;
-      }
-    }
-  }
-
-  & .inline-drawer-content {
-    & > .flex-container {
-      flex-direction: row !important;
-      align-items: center;
-      margin: 10px 0;
-      padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      background-color: #fff !important;
-      box-sizing: border-box;
-
-      & > .flex-container {
-        flex-direction: row !important;
-        width: 100% !important;
-        margin-top: 10px;
       }
     }
   }
