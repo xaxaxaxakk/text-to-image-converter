@@ -312,7 +312,6 @@
   /* 커스텀 이미지 */
   & .custom-bg-upload {
     width: 100%;
-
     & label {
       display: block;
       width: 100% !important;
@@ -325,15 +324,13 @@
       transition: background-color 0.3s, color 0.3s;
 
       &:hover {
-        background: #007bff;
+        background-color: #007bff;
         color: #fff;
       }
     }
-
-    & .bg-image-item {
-      position: relative;
-    }
-
+  }
+  & .bg-image-item {
+    position: relative;
     & .delete-bg-btn {
       position: absolute;
       top: 5px;
@@ -350,8 +347,7 @@
       cursor: pointer;
       transition: opacity 0.2s;
     }
-
-    & .bg-image-item:hover .delete-bg-btn {
+    &:hover .delete-bg-btn {
       opacity: 1;
     }
   }
