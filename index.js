@@ -15,6 +15,8 @@ const defaultSettings = {
   backgroundColor: "#ffffff",
   imageRatio: "square",
   bgBlur: 0,
+  bgBrightness: 100,
+  bgHue: 0,
   bgGrayscale: 0,
   bgNoise: 0,
   overlayOpacity: 0,
@@ -37,6 +39,8 @@ async function initSettings() {
     useBackgroundColor,
     backgroundColor,
     bgBlur,
+    bgBrightness,
+    bgHue,
     bgGrayscale,
     bgNoise,
     overlayOpacity,
@@ -55,6 +59,8 @@ async function initSettings() {
   $("#use_background_color").prop("checked", useBackgroundColor);
   $("#background_color").val(backgroundColor);
   $("#bg_blur").val(bgBlur);
+  $("#bg_brightness").val(bgBrightness);
+  $("#bg_hue").val(bgHue);
   $("#bg_grayscale").val(bgGrayscale);
   $("#bg_noise").val(bgNoise);
   $("#overlay_opacity").val(overlayOpacity);
@@ -172,6 +178,8 @@ function deletePreset() {
     $("#text_image_stroke_width").val(defaultSettings.strokeWidth);
     $("#text_image_ratio").val(defaultSettings.imageRatio);
     $("#bg_blur").val(defaultSettings.bgBlur);
+    $("#bg_brightness").val(defaultSettings.bgBrightness);
+    $("#bg_hue").val(defaultSettings.bgHue);
     $("#bg_grayscale").val(defaultSettings.bgGrayscale);
     $("#bg_noise").val(defaultSettings.bgNoise);
     $("#overlay_opacity").val(defaultSettings.overlayOpacity);
@@ -212,6 +220,8 @@ function selectPreset() {
     $("#text_image_stroke_width").val(defaultSettings.strokeWidth);
     $("#text_image_ratio").val(defaultSettings.imageRatio);
     $("#bg_blur").val(defaultSettings.bgBlur);
+    $("#bg_brightness").val(defaultSettings.bgBrightness);
+    $("#bg_hue").val(defaultSettings.bgHue);
     $("#bg_grayscale").val(defaultSettings.bgGrayscale);
     $("#bg_noise").val(defaultSettings.bgNoise);
     $("#overlay_opacity").val(defaultSettings.overlayOpacity);
@@ -295,6 +305,12 @@ function applyPreset(presetName) {
         break;
       case "bgBlur":
         $("#bg_blur").val(value);
+        break;
+      case "bgBrightness":
+        $("#bg_brightness").val(value);
+        break;
+      case "bgHue":
+        $("#bg_hue").val(value);
         break;
       case "bgGrayscale":
         $("#bg_grayscale").val(value);
@@ -462,6 +478,16 @@ function backgroundColor(event) {
 }
 function addBlur(event) {
   extension_settings[extensionName].bgBlur = parseFloat(event.target.value);
+  saveSettings();
+  refreshPreview();
+}
+function brightness(event) {
+  extension_settings[extensionName].bgBrightness = parseFloat(event.target.value);
+  saveSettings();
+  refreshPreview();
+}
+function hue(event) {
+  extension_settings[extensionName].bgHue = parseFloat(event.target.value);
   saveSettings();
   refreshPreview();
 }
@@ -837,8 +863,14 @@ function generateTextImage(chunk, index) {
     }
     ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
 
-    if (settings.bgBlur > 0) {
-      ctx.filter = `blur(${settings.bgBlur}px)`;
+    let filterEffects = [];
+    if (settings.bgBlur > 0) filterEffects.push(`blur(${settings.bgBlur}px)`);
+    if (settings.bgBrightness !== undefined)
+      filterEffects.push(`brightness(${settings.bgBrightness}%)`);
+    if (settings.bgHue !== undefined) filterEffects.push(`hue-rotate(${settings.bgHue}deg)`);
+
+    if (filterEffects.length > 0) {
+      ctx.filter = filterEffects.join(" ");
       ctx.drawImage(canvas, 0, 0, width, height);
       ctx.filter = "none";
     }
@@ -1107,6 +1139,8 @@ jQuery(async () => {
   $("#use_background_color").on("change", useBackgroundColor);
   $("#background_color").on("change", backgroundColor);
   $("#bg_blur").on("change", addBlur);
+  $("#bg_brightness").on("change", brightness);
+  $("#bg_hue").on("change", hue);
   $("#bg_grayscale").on("change", grayScale);
   $("#bg_noise").on("change", addNoise);
   $("#overlay_color").on("change", overlayColor);
@@ -1114,6 +1148,9 @@ jQuery(async () => {
   $("#footer_text").on("change", footerText);
   $("#footer_color").on("change", footerColor);
 
+  $("#how_to_use").on("click", () => {
+    $(".how_to_use_box").slideToggle();
+  });
   $("h4.toggle").each(function () {
     const $this = $(this);
     const $siblings = $this.siblings();
