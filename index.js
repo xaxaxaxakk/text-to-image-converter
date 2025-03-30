@@ -378,10 +378,9 @@ async function loadFonts() {
     const select = $("#text_image_font_family").empty();
 
     const fontPromises = fonts.map(async (font) => {
-      const link = document.createElement("link");
-      link.href = font.url;
-      link.rel = "stylesheet";
-      document.head.appendChild(link);
+      const option = document.createElement("option");
+      option.value = font.value;
+      option.textContent = font.label;
       await document.fonts.load(`1em ${font.value}`);
       select.append(`<option value="${font.value}">${font.label}</option>`);
     });
