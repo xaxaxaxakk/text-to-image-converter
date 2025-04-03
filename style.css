@@ -612,3 +612,59 @@
     format("woff");
   font-style: normal;
 }
+@font-face {
+  font-family: "ANDONG264TTF";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2502-1@1.0/ANDONG264TTF.woff2")
+    format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "SimKyungha";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2202-2@1.0/SimKyungha.woff")
+    format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "KCC-Sonkeechung";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2212@1.0/KCC-Sonkeechung.woff2")
+    format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "KyoboHandwriting2023wsa";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2404-2@1.0/KyoboHandwriting2023wsa.woff2")
+    format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Ownglyph_kimkonghae";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2408@1.0/Ownglyph_kimkonghae.woff2")
+    format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Pretty_Left_handed";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/naverfont_09@1.0/Pretty_Left_handed.woff")
+    format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "mom_to_daughter";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/naverfont_08@1.0/mom_to_daughter.woff")
+    format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Saying_tobe_strong";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/naverfont_09@1.0/Saying_tobe_strong.woff")
+    format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
