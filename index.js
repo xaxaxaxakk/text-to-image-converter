@@ -27,6 +27,7 @@ const defaultSettings = {
   footerColor: "#000000",
 };
 
+
 async function initSettings() {
   extension_settings[extensionName] = {...defaultSettings, ...extension_settings[extensionName]};
   const {
@@ -77,6 +78,7 @@ async function initSettings() {
     refreshPreview();
   }
 }
+
 
 function presetUI() {
   $("#create_preset").on("click", createPreset);
@@ -371,6 +373,7 @@ function updatePresetSelector(selectedPreset = null) {
   }
 }
 
+
 async function loadFonts() {
   try {
     const response = await fetch(`${extensionFolderPath}/font-family.json`);
@@ -390,6 +393,7 @@ async function loadFonts() {
     refreshPreview();
   } catch (error) {}
 }
+
 
 async function loadBG() {
   try {
@@ -465,6 +469,7 @@ function removeCustomBg(event) {
   }
 }
 
+
 function useBackgroundColor(event) {
   extension_settings[extensionName].useBackgroundColor = event.target.checked;
   saveSettings();
@@ -510,6 +515,7 @@ function overlayColor(event) {
   saveSettings();
   refreshPreview();
 }
+
 
 function setupWordReplacer() {
   let originalText = "";
@@ -560,6 +566,8 @@ function replaceWords() {
   $("#text_to_image").val(text);
   refreshPreview();
 }
+
+
 function findKoreanWord(text, originalWord, replacementWord) {
   const originalLower = originalWord.toLowerCase();
   const verbEndingPattern = /^[자고며다요네죠게서써도구나군요까봐서라야지거든만큼]/;
@@ -634,12 +642,12 @@ function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+
 function fontFamily(event) {
   extension_settings[extensionName].fontFamily = event.target.value;
   saveSettings();
   refreshPreview();
 }
-
 function strokeWidth(event) {
   extension_settings[extensionName].strokeWidth = event.target.value;
   saveSettings();
@@ -697,6 +705,8 @@ function getCanvasSize() {
       return {width: 700, height: 700};
   }
 }
+
+
 function refreshPreview() {
   const text = $("#text_to_image").val() || "";
   const chunks = wrappingTexts(text);
@@ -705,7 +715,26 @@ function refreshPreview() {
   chunks.forEach((chunk, i) => {
     $container.append(generateTextImage(chunk, i));
   });
+
+  const imageCount = chunks.length;
+  const $previewTitle = $("#image_preview_box h4");
+  const $dlAllBtn = $previewTitle.find(".dl_all");
+
+  if (imageCount >= 2) {
+    if ($dlAllBtn.length === 0) {
+      const $newDlAllBtn = $(
+        '<div class="dl_all"><i class="fa-solid fa-circle-down"></i> 전체 다운로드</div>'
+      );
+      $previewTitle.append($newDlAllBtn);
+      $newDlAllBtn.on("click", () => {
+        autoDownload("#image_preview_container .download-btn", 500);
+      });
+    }
+  } else {
+    $dlAllBtn.remove();
+  }
 }
+
 
 function enableMarkdown(text) {
   const spans = [];
@@ -765,6 +794,7 @@ function enableMarkdown(text) {
   if (currentText) spans.push({text: currentText, bold, italic, fontColor, bgColor});
   return spans;
 }
+
 
 function wrappingTexts(text) {
   const canvas = document.createElement("canvas");
@@ -865,7 +895,6 @@ function wrappingTexts(text) {
     })
     .filter((page) => page.length > 0);
 }
-
 function generateTextImage(chunk, index) {
   const {width, height} = getCanvasSize();
   const canvas = document.createElement("canvas");
@@ -1072,6 +1101,54 @@ function generateTextImage(chunk, index) {
   return $preview;
 }
 
+
+function autoDownload(allDLbuttons, delay = 1500) {
+  setTimeout(() => {
+    const DLbuttons = $(allDLbuttons);
+    if (isMobileDevice() && DLbuttons.length > 1) {
+      openAllImages(DLbuttons);
+    } else {
+      let index = 0;
+      controlDL(DLbuttons, index);
+    }
+  }, delay);
+}
+function isMobileDevice() {
+  return /Android|webOS|iPhone|iPad/i.test(navigator.userAgent);
+}
+function openAllImages(DLbuttons) {
+  const newTab = window.open("", "_blank");
+  let htmlContent = `
+    <html>
+      <body style="margin: 0; padding: 0;">
+  `;
+  for (let i = 0; i < DLbuttons.length; i++) {
+    const $img = $(DLbuttons[i]).siblings("img");
+    const imgSrc = $img.attr("src");
+    htmlContent += `
+      <div style="margin-bottom: 20px;">
+        <img src="${imgSrc}" style="width: 100%; display: block;">
+      </div>
+    `;
+  }
+  htmlContent += `
+      </body>
+    </html>
+  `;
+  if (newTab) {
+    newTab.document.write(htmlContent);
+    newTab.document.close();
+  }
+}
+function controlDL(DLbuttons, index) {
+  if (index < DLbuttons.length) {
+    $(DLbuttons[index]).trigger("click");
+    index++;
+    setTimeout(() => controlDL(DLbuttons, index), 1000);
+  }
+}
+
+
 function saveImage(dataUrl, filename) {
   const now = new Date();
   const dateString = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(
@@ -1083,6 +1160,7 @@ function saveImage(dataUrl, filename) {
   link.download = `${dateString}_${index}.png`;
   link.click();
 }
+
 
 function setupImageConvertButton() {
   let selectedText = "";
@@ -1165,11 +1243,6 @@ function setupImageConvertButton() {
   });
   observer.observe($("#chat")[0], {childList: true, subtree: true});
 }
-
-function isMobileDevice() {
-  return /Android|webOS|iPhone|iPad/i.test(navigator.userAgent);
-}
-
 function setExtractText(text) {
   $("#text_to_image").val(text);
 
@@ -1196,55 +1269,7 @@ function setExtractText(text) {
   }
 
   refreshPreview();
-
-  setTimeout(() => {
-    const downloadButtons = $("#image_preview_container .download-btn");
-
-    if (isMobileDevice() && downloadButtons.length > 1) {
-      let index = 0;
-
-      function openAllImages() {
-        const newTab = window.open("", "_blank");
-        let htmlContent = `
-        <html>
-            <body style="margin: 0; padding: 0;">
-    `;
-        for (let i = 0; i < downloadButtons.length; i++) {
-          const $img = $(downloadButtons[i]).siblings("img");
-          const imgSrc = $img.attr("src");
-          htmlContent += `
-            <div style="margin-bottom: 20px;">
-                <img src="${imgSrc}" style="width: 100%; display: block;">
-            </div>
-        `;
-        }
-        htmlContent += `
-            </body>
-        </html>
-    `;
-        if (newTab) {
-          newTab.document.write(htmlContent);
-          newTab.document.close();
-        }
-      }
-
-      openAllImages();
-    } else {
-      let index = 0;
-
-      function controlDL() {
-        if (index < downloadButtons.length) {
-          $(downloadButtons[index]).trigger("click");
-          index++;
-          setTimeout(controlDL, 1000);
-        }
-      }
-
-      if (downloadButtons.length > 0) {
-        controlDL();
-      }
-    }
-  }, 1500);
+  autoDownload("#image_preview_container .download-btn", 1500);
 }
 
 jQuery(async () => {
