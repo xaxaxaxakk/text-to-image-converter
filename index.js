@@ -1109,8 +1109,11 @@ function generateTextImage(chunk, index) {
 function autoDownload(allDLbuttons, delay = 1500) {
   setTimeout(() => {
     const DLbuttons = $(allDLbuttons);
-    if (DLbuttons.length > 3) {
+    if (DLbuttons.length > 1) {
       zipDL(DLbuttons);
+    } else {
+      let index = 0;
+      controlDL(DLbuttons, index);
     }
   }, delay);
 }
@@ -1162,17 +1165,23 @@ function loadScript(src) {
     document.head.appendChild(script);
   });
 }
-
+function controlDL(DLbuttons, index) {
+  if (index < DLbuttons.length) {
+    $(DLbuttons[index]).trigger("click");
+    index++;
+    setTimeout(() => controlDL(DLbuttons, index), 1000);
+  }
+}
 
 function saveImage(dataUrl, filename) {
   const now = new Date();
-  const dateString = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(
+  const dateString = `[Log] ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
     now.getDate()
-  ).padStart(2, "0")}_${now.getHours()}${now.getMinutes()}${now.getSeconds()}`;
+  ).padStart(2, "0")}-${now.getHours()}-${now.getMinutes()}`;
   const index = filename.replace(".png", "");
   const link = document.createElement("a");
   link.href = dataUrl;
-  link.download = `${dateString}_${index}.png`;
+  link.download = `${dateString} (${index}).png`;
   link.click();
 }
 
