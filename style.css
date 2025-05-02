@@ -188,12 +188,11 @@
 
     & #apply_replacement:hover {
       background: #007bff;
-    }
-
-    & #restore_text:hover,
-    & #clear_replace:hover {
-      background: #cc0000;
-    }
+    }    
+  }
+  & #restore_text:hover,
+  & #clear_replace:hover {
+    background: #cc0000;
   }
   & .justify-center {
     justify-content: flex-end !important;
