@@ -15,7 +15,7 @@
           <br />
           - 폰트 정렬 오류 수정
           <br />
-          - 특수문자 / 특수문자+단어 혼합 / 빈칸 치환 (문자 없애기) / 병렬 치환 (예시: {{user}}<=>{{char}})
+          - 특수문자 / 특수문자+단어 혼합 / 빈칸 치환 (문자 없애기) / 병렬 치환 (예시: {{user}}<->{{char}})
         </span>
         <span>🔹 각종 옵션들을 설정한 다음 미리보기 확인 후 다운로드</span>
         <span>🔹 설정한 옵션을 계속 사용하고자 한다면 프리셋에 저장하기</span>
@@ -30,10 +30,12 @@
           <span>
             🌼
             <b>특정 텍스트 발췌:</b>
-            부분 드래그 후 버튼 클릭 👉 드래그 취소해도 버튼을 클릭하면 발췌되지만, 15초가 지나면 리셋됨
+            부분 드래그 후 버튼 클릭 👉 드래그 취소해도 버튼을 클릭하면 발췌되지만, 15초가 지나면
+            리셋됨
           </span>
           <span class="desc">
-            📌 이미지가 2장 이상 생길 경우, 전체 다운로드 버튼이나 발췌 버튼을 눌렀을 때 zip파일로 받아짐
+            📌 이미지가 2장 이상 생길 경우, 전체 다운로드 버튼이나 발췌 버튼을 눌렀을 때 zip파일로
+            받아짐
           </span>
         </span>
         <span>
@@ -126,8 +128,15 @@
         </div>
       </div>
 
-      <div class="flex-container">
-        <h4 class="toggle">👉 텍스트 스타일 설정</h4>
+      <div class="tab-container">
+        <button class="tab-btn" data-tab="text-style">글꾸 설정</button>
+        <button class="tab-btn" data-tab="background">배경 선택</button>
+        <button class="tab-btn" data-tab="image-style">배경 편집</button>
+        <button class="tab-btn" data-tab="footer">바닥글</button>
+      </div>
+
+      <div id="text-style" class="tab-content flex-container">
+        <h4>텍스트 스타일 설정</h4>
         <div class="flex-container">
           <label for="text_image_font_family">글꼴</label>
           <select id="text_image_font_family"></select>
@@ -166,8 +175,8 @@
         </div>
       </div>
 
-      <div class="flex-container">
-        <h4 class="toggle">👉 배경 종류 선택</h4>
+      <div id="background" class="tab-content flex-container">
+        <h4>배경 종류 선택</h4>
         <div class="flex-container">
           <h5>
             <i class="fa-solid fa-palette"></i>
@@ -196,8 +205,8 @@
         </div>
       </div>
 
-      <div class="flex-container">
-        <h4 class="toggle">👉 이미지 스타일 설정</h4>
+      <div id="image-style" class="tab-content flex-container">
+        <h4>이미지 스타일 설정</h4>
         <div class="flex-container">
           <label for="text_image_ratio">비율</label>
           <select id="text_image_ratio">
@@ -236,8 +245,8 @@
         </div>
       </div>
 
-      <div class="flex-container">
-        <h4 class="toggle">👉 바닥글 추가</h4>
+      <div id="footer" class="tab-content flex-container">
+        <h4>바닥글 추가</h4>
         <div class="flex-container">
           <label for="footer_text">텍스트</label>
           <input type="text" id="footer_text" placeholder="" />
