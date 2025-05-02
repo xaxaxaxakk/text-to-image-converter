@@ -115,7 +115,7 @@
     border: 1px solid var(--SmartThemeBorderColor) !important;
     border-radius: 8px;
     background-color: var(--black30a);
-    color: #2b2b2b;
+    color: var(--SmartThemeBodyColor);
     text-align: center;
     overflow: hidden;
     cursor: pointer;
@@ -153,7 +153,7 @@
     border: 1px solid var(--SmartThemeBorderColor) !important;
     border-radius: 8px;
     background-color: var(--black30a);
-    color: #2b2b2b;
+    color: var(--SmartThemeBodyColor);
     text-align: center;
     overflow: hidden;
     cursor: pointer;
@@ -390,7 +390,7 @@
   }
 
   .dl_all {
-    color: #2c3e50;
+    color: var(--SmartThemeBodyColor);
     font-size: 13px !important;
     cursor: pointer;
   }
