@@ -537,7 +537,7 @@ function setupWordReplacer() {
 function replaceWords() {
   let text = $("#text_to_image").val();
 
-  const wordPairs = [
+  const wordGroup = [
     {
       original: $("#original_word_1").val().trim(),
       replacement: $("#replacement_word_1").val().trim(),
@@ -554,19 +554,33 @@ function replaceWords() {
       original: $("#original_word_4").val().trim(),
       replacement: $("#replacement_word_4").val().trim(),
     },
-  ];
+  ].filter(group => group.original);
 
-  wordPairs.forEach(({original, replacement}) => {
-    if (original) {
-      const replacementText = replacement || "";
-      const containsKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(original);
-      if (containsKorean) {
-        text = findKoreanWord(text, original, replacementText);
-      } else {
-        text = replaceString(text, original, replacementText);
-      }
+  if (wordGroup.length === 0) {
+    return;
+  }
+
+  const originalTemp = wordGroup.map((_, index) => `_temp_${index}_`);
+  
+  for (let i = 0; i < wordGroup.length; i++) {
+    const {original} = wordGroup[i];
+    const temp = originalTemp[i];
+    
+    const containsKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(original);
+    if (containsKorean) {
+      text = findKoreanWord(text, original, temp);
+    } else {
+      text = replaceString(text, original, temp);
     }
-  });
+  }
+  
+  for (let i = 0; i < wordGroup.length; i++) {
+    const {replacement} = wordGroup[i];
+    const temp = originalTemp[i];
+    const replacementText = replacement || "";
+    
+    text = text.split(temp).join(replacementText);
+  }
 
   $("#text_to_image").val(text);
   refreshPreview();
