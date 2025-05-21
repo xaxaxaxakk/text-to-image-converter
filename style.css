@@ -218,8 +218,13 @@
       border-radius: 8px;
       background-color: var(--black30a);
       text-align: center;
+      line-height: 13px !important;
       cursor: pointer;
       transition: all 0.3s;
+
+      & i {
+        font-size: 13px !important;
+      }
 
       &.active {
         background: #007bff;
