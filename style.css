@@ -224,6 +224,7 @@
 
       & i {
         font-size: 13px !important;
+        transform: translateY(-1px);
       }
 
       &.active {
