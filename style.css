@@ -255,8 +255,11 @@
     & > *:not(input[type="range"]) {
       height: 40px;
     }
-    & label {
+    & label:not(.upload-btn) {
       width: 60px;
+      display: flex;
+      flex-wrap: wrap !important;
+      align-content: center !important;
     }
   }
 
