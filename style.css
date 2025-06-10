@@ -273,7 +273,7 @@
     & input[type="checkbox"] {
       width: 20px !important;
       height: 20px !important;
-      border-radius: 50% !important !important;
+      border-radius: 50% !important;
     }
     & input[type="color"] {
       width: calc(100% - 70px);
