@@ -272,6 +272,7 @@
       border: 1px solid var(--SmartThemeBorderColor) !important;
       border-radius: 8px;
       background-color: transparent;
+      margin: 0;
     }
     & input[type="checkbox"] {
       width: 20px !important;
