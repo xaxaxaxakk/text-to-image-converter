@@ -31,20 +31,26 @@
 
   /* how to use */
   & #how_to_use {
-    display: inline-block;
+    display: flex;
     margin-bottom: 10px;
-    padding: 10px 15px;
-    border: 1px solid var(--SmartThemeBorderColor);
-    border-radius: 8px;
-    cursor: pointer !important;
-    transition: border-color 0.3s;
-    &:hover {
-      border-color: rgb(255, 153, 0);
+    
+    & b {
+      padding: 10px;
+      border: 1px solid var(--SmartThemeBorderColor);
+      border-radius: 8px;
+      cursor: pointer !important;
+      transition: border-color 0.3s;
     }
     & i {
       margin-right: 5px;
       color: rgb(255, 153, 0);
       vertical-align: top;
+    }
+    & b:hover {
+      border-color: rgb(255, 153, 0);
+    }    
+    & a {
+      margin-left: auto;
     }
   }
   & .how_to_use_box {
