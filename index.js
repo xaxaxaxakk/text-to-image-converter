@@ -1492,8 +1492,8 @@ jQuery(async () => {
   $("#footer_text").on("change", footerText);
   $("#footer_color").on("change", footerColor);
 
-  $("#how_to_use").on("click", () => {
-    $(".how_to_use_box").slideToggle();
+  $("#how_to_use b").on("click", function () {
+    $(this).parent().next(".how_to_use_box").slideToggle();
   });
   $("h4.toggle").each(function () {
     const $this = $(this);
