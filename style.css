@@ -33,24 +33,28 @@
   & #how_to_use {
     display: flex;
     margin-bottom: 10px;
+    align-items: center;
     
     & b {
-      padding: 10px;
+      padding: 10px 15px;
       border: 1px solid var(--SmartThemeBorderColor);
-      border-radius: 8px;
+      border-radius: 20px;
       cursor: pointer !important;
       transition: border-color 0.3s;
-    }
-    & i {
-      margin-right: 5px;
-      color: rgb(255, 153, 0);
-      vertical-align: top;
     }
     & b:hover {
       border-color: rgb(255, 153, 0);
     }    
     & a {
       margin-left: auto;
+      padding-right: 10px;
+      font-size: 13px !important;
+    }    
+    & i {
+      transition: color 0.3s;
+    }
+    & a:hover i {
+      color: rgb(255, 153, 0);
     }
   }
   & .how_to_use_box {
