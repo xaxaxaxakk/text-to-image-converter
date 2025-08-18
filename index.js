@@ -815,24 +815,36 @@ function enableMarkdown(text) {
   let currentText = "";
   let bold = false;
   let italic = false;
+  let strikethrough = false;
   let fontColor = null;
   let bgColor = null;
   let i = 0;
   let colorHighlight = false;
 
   while (i < text.length) {
-    if (text.slice(i, i + 2) === "**") {
-      if (currentText) spans.push({text: currentText, bold, italic, fontColor, bgColor});
+    if (text.slice(i, i + 3) === "***") {
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
+      bold = !bold;
+      italic = !italic;
+      currentText = "";
+      i += 3;
+    } else if (text.slice(i, i + 2) === "**") {
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
       bold = !bold;
       currentText = "";
       i += 2;
+    } else if (text.slice(i, i + 2) === "~~") {
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
+      strikethrough = !strikethrough;
+      currentText = "";
+      i += 2;
     } else if (text[i] === "*" && (i + 1 >= text.length || text[i + 1] !== "*")) {
-      if (currentText) spans.push({text: currentText, bold, italic, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
       italic = !italic;
       currentText = "";
       i++;
     } else if (text.slice(i, i + 2) === "=(" && i + 2 < text.length) {
-      if (currentText) spans.push({text: currentText, bold, italic, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
       currentText = "";
       colorHighlight = true;
 
@@ -853,7 +865,7 @@ function enableMarkdown(text) {
         colorHighlight = false;
       }
     } else if (text[i] === "=" && colorHighlight) {
-      if (currentText) spans.push({text: currentText, bold, italic, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
       fontColor = null;
       bgColor = null;
       currentText = "";
@@ -865,7 +877,7 @@ function enableMarkdown(text) {
     }
   }
 
-  if (currentText) spans.push({text: currentText, bold, italic, fontColor, bgColor});
+  if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
   return spans;
 }
 
@@ -894,10 +906,10 @@ function wrappingTexts(text, mode = "word") {
         lineCount = 0;
       } else {
         if (mode === "word") {
-          currentPage.push([{ text: "", bold: false, italic: false, fontColor: null, bgColor: null }]);
+          currentPage.push([{ text: "", bold: false, italic: false, strikethrough: false, fontColor: null, bgColor: null }]);
         } else {
           currentPage.push({
-            spans: [{ text: "", bold: false, italic: false }],
+            spans: [{ text: "", bold: false, italic: false, strikethrough: false }],
             softBreak: false,
           });
         }
@@ -919,9 +931,9 @@ function wrappingTexts(text, mode = "word") {
       units.forEach((unit) => {
         if (mode === "char" && (unit === " " || unit === "\t") && currentLine.length === 0) return;
 
-        ctx.font = `${
-          span.bold ? "bold" : span.italic ? "italic" : extension_settings[extensionName].fontWeight
-        } ${fontSize}px ${extension_settings[extensionName].fontFamily}`;
+        const fontWeight = span.bold ? "bold" : extension_settings[extensionName].fontWeight;
+        const fontStyle = span.italic ? "italic" : "normal";
+        ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${extension_settings[extensionName].fontFamily}`;
 
         const testText = currentLineText + unit;
         if (ctx.measureText(testText).width <= maxWidth) {
@@ -930,6 +942,7 @@ function wrappingTexts(text, mode = "word") {
             text: unit,
             bold: span.bold,
             italic: span.italic,
+            strikethrough: span.strikethrough,
             fontColor: span.fontColor,
             bgColor: span.bgColor,
           });
@@ -949,6 +962,7 @@ function wrappingTexts(text, mode = "word") {
             text: unit.trimStart(),
             bold: span.bold,
             italic: span.italic,
+            strikethrough: span.strikethrough,
             fontColor: span.fontColor,
             bgColor: span.bgColor,
           }];
@@ -1045,7 +1059,9 @@ function generateTextImage(chunk, index) {
     const maxLineWidth = width - 80;
 
     function setFont(span) {
-    ctx.font = `${span.bold ? "bold" : span.italic ? "italic" : settings.fontWeight} ${fontSize}px ${settings.fontFamily}`;
+      const fontWeight = span.bold ? "bold" : settings.fontWeight;
+      const fontStyle = span.italic ? "italic" : "normal";
+      ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${settings.fontFamily}`;
     }
 
     function renderSpan(span, x, y) {
@@ -1075,6 +1091,15 @@ function generateTextImage(chunk, index) {
 
     if (strokeWidth > 0) ctx.strokeText(span.text, x, y);
     ctx.fillText(span.text, x, y);
+
+    if (span.strikethrough) {
+      ctx.beginPath();
+      ctx.moveTo(x, y - textHeight / 3);
+      ctx.lineTo(x + textWidth, y - textHeight / 3);
+      ctx.strokeStyle = span.fontColor || settings.fontColor || "#000000";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
 
     return textWidth;
     }
