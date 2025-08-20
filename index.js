@@ -11,6 +11,16 @@ const defaultSettings = {
   fontSize: "24px",
   fontAlign: "left",
   fontColor: "#000000",
+  useItalicColor: false,
+  italicFontColor: "#000000",
+  useBoldColor: false,
+  boldFontColor: "#000000",
+  useBoldItalicColor: false,
+  boldItalicFontColor: "#000000",
+  useStrikethroughColor: false,
+  strikethroughFontColor: "#000000",
+  useUnderlineColor: false,
+  underlineFontColor: "#000000",
   strokeWidth: "0",
   lineBreak: "byWord",
   selectedBackgroundImage: `${extensionFolderPath}/default-backgrounds/bg40.png`,
@@ -38,6 +48,16 @@ async function initSettings() {
     fontSize,
     fontAlign,
     fontColor,
+    useItalicColor,
+    italicFontColor,
+    useBoldColor,
+    boldFontColor,
+    useBoldItalicColor,
+    boldItalicFontColor,
+    useStrikethroughColor,
+    strikethroughFontColor,
+    useUnderlineColor,
+    underlineFontColor,
     strokeWidth,
     lineBreak,
     imageRatio,
@@ -55,13 +75,23 @@ async function initSettings() {
     footerColor,
   } = extension_settings[extensionName];
 
-  $("#text_image_font_family").val(fontFamily);
-  $("#text_image_font_size").val(fontSize);
-  $("#text_image_font_align").val(fontAlign);
-  $("#text_image_font_color").val(fontColor);
-  $("#text_image_stroke_width").val(strokeWidth);
-  $("#text_image_line_break").val(lineBreak);
-  $("#text_image_ratio").val(imageRatio);
+  $("#tti_font_family").val(fontFamily);
+  $("#tti_font_size").val(fontSize);
+  $("#tti_font_align").val(fontAlign);
+  $("#tti_font_color").val(fontColor);
+  $("#use_italic_color").prop("checked", useItalicColor);
+  $("#tti_italic_font_color").val(italicFontColor);
+  $("#use_bold_color").prop("checked", useBoldColor);
+  $("#tti_bold_font_color").val(boldFontColor);
+  $("#use_boldItalic_color").prop("checked", useBoldItalicColor);
+  $("#tti_boldItalic_font_color").val(boldItalicFontColor);
+  $("#use_strikethrough_color").prop("checked", useStrikethroughColor);
+  $("#tti_strikethrough_font_color").val(strikethroughFontColor);
+  $("#use_underline_color").prop("checked", useUnderlineColor);
+  $("#tti_underline_font_color").val(underlineFontColor);
+  $("#tti_stroke_width").val(strokeWidth);
+  $("#tti_line_break").val(lineBreak);
+  $("#tti_ratio").val(imageRatio);
   $("#use_background_color").prop("checked", useBackgroundColor);
   $("#background_color").val(backgroundColor);
   $("#bg_blur").val(bgBlur);
@@ -178,13 +208,23 @@ function deletePreset() {
       currentPreset: null,
     };
 
-    $("#text_image_font_family").val(defaultSettings.fontFamily);
-    $("#text_image_font_size").val(defaultSettings.fontSize);
-    $("#text_image_font_align").val(defaultSettings.fontAlign);
-    $("#text_image_font_color").val(defaultSettings.fontColor);
-    $("#text_image_stroke_width").val(defaultSettings.strokeWidth);
-    $("#text_image_line_break").val(defaultSettings.lineBreak);
-    $("#text_image_ratio").val(defaultSettings.imageRatio);
+    $("#tti_font_family").val(defaultSettings.fontFamily);
+    $("#tti_font_size").val(defaultSettings.fontSize);
+    $("#tti_font_align").val(defaultSettings.fontAlign);
+    $("#tti_font_color").val(defaultSettings.fontColor);
+    $("#use_italic_color").prop("checked", defaultSettings.useItalicColor);
+    $("#tti_italic_font_color").val(defaultSettings.italicFontColor);
+    $("#use_bold_color").prop("checked", defaultSettings.useBoldColor);
+    $("#tti_bold_font_color").val(defaultSettings.boldFontColor);
+    $("#use_boldItalic_color").prop("checked", defaultSettings.useBoldItalicColor);
+    $("#tti_boldItalic_font_color").val(defaultSettings.boldItalicFontColor);
+    $("#use_strikethrough_color").prop("checked", defaultSettings.useStrikethroughColor);
+    $("#tti_strikethrough_font_color").val(defaultSettings.strikethroughFontColor);
+    $("#use_underline_color").prop("checked", defaultSettings.useUnderlineColor);
+    $("#tti_underline_font_color").val(defaultSettings.underlineFontColor);
+    $("#tti_stroke_width").val(defaultSettings.strokeWidth);
+    $("#tti_line_break").val(defaultSettings.lineBreak);
+    $("#tti_ratio").val(defaultSettings.imageRatio);
     $("#bg_blur").val(defaultSettings.bgBlur);
     $("#bg_brightness").val(defaultSettings.bgBrightness);
     $("#bg_hue").val(defaultSettings.bgHue);
@@ -221,13 +261,23 @@ function selectPreset() {
       currentPreset: null,
     };
 
-    $("#text_image_font_family").val(defaultSettings.fontFamily);
-    $("#text_image_font_size").val(defaultSettings.fontSize);
-    $("#text_image_font_align").val(defaultSettings.fontAlign);
-    $("#text_image_font_color").val(defaultSettings.fontColor);
-    $("#text_image_stroke_width").val(defaultSettings.strokeWidth);
-    $("#text_image_line_break").val(defaultSettings.lineBreak);
-    $("#text_image_ratio").val(defaultSettings.imageRatio);
+    $("#tti_font_family").val(defaultSettings.fontFamily);
+    $("#tti_font_size").val(defaultSettings.fontSize);
+    $("#tti_font_align").val(defaultSettings.fontAlign);
+    $("#tti_font_color").val(defaultSettings.fontColor);
+    $("#use_italic_color").prop("checked", defaultSettings.useItalicColor);
+    $("#tti_italic_font_color").val(defaultSettings.italicFontColor);
+    $("#use_bold_color").prop("checked", defaultSettings.useBoldColor);
+    $("#tti_bold_font_color").val(defaultSettings.boldFontColor);
+    $("#use_boldItalic_color").prop("checked", defaultSettings.useBoldItalicColor);
+    $("#tti_boldItalic_font_color").val(defaultSettings.boldItalicFontColor);
+    $("#use_strikethrough_color").prop("checked", defaultSettings.useStrikethroughColor);
+    $("#tti_strikethrough_font_color").val(defaultSettings.strikethroughFontColor);
+    $("#use_underline_color").prop("checked", defaultSettings.useUnderlineColor);
+    $("#tti_underline_font_color").val(defaultSettings.underlineFontColor);
+    $("#tti_stroke_width").val(defaultSettings.strokeWidth);
+    $("#tti_line_break").val(defaultSettings.lineBreak);
+    $("#tti_ratio").val(defaultSettings.imageRatio);
     $("#bg_blur").val(defaultSettings.bgBlur);
     $("#bg_brightness").val(defaultSettings.bgBrightness);
     $("#bg_hue").val(defaultSettings.bgHue);
@@ -295,25 +345,55 @@ function applyPreset(presetName) {
 
     switch (key) {
       case "fontFamily":
-        $("#text_image_font_family").val(value);
+        $("#tti_font_family").val(value);
         break;
       case "fontSize":
-        $("#text_image_font_size").val(value);
+        $("#tti_font_size").val(value);
         break;
       case "fontAlign":
-        $("#text_image_font_align").val(value);
+        $("#tti_font_align").val(value);
         break;
       case "fontColor":
-        $("#text_image_font_color").val(value);
+        $("#tti_font_color").val(value);
+        break;
+      case "useItalicColor":
+        $("#use_italic_color").prop("checked", value);
+        break;
+      case "italicFontColor":
+        $("#tti_italic_font_color").val(value);
+        break;
+      case "useBoldColor":
+        $("#use_bold_color").prop("checked", value);
+        break;
+      case "boldFontColor":
+        $("#tti_bold_font_color").val(value);
+        break;
+      case "useBoldItalicColor":
+        $("#use_boldItalic_color").prop("checked", value);
+        break;
+      case "boldItalicFontColor":
+        $("#tti_boldItalic_font_color").val(value);
+        break;
+      case "useStrikethroughColor":
+        $("#use_strikethrough_color").prop("checked", value);
+        break;
+      case "strikethroughFontColor":
+        $("#tti_strikethrough_font_color").val(value);
+        break;
+      case "useUnderlineColor":
+        $("#use_underline_color").prop("checked", value);
+        break;
+      case "underlineFontColor":
+        $("#tti_underline_font_color").val(value);
         break;
       case "strokeWidth":
-        $("#text_image_stroke_width").val(value);
+        $("#tti_stroke_width").val(value);
         break;
       case "lineBreak":
-        $("#text_image_line_break").val(value);
+        $("#tti_line_break").val(value);
         break;
       case "imageRatio":
-        $("#text_image_ratio").val(value);
+        $("#tti_ratio").val(value);
         break;
       case "bgBlur":
         $("#bg_blur").val(value);
@@ -388,7 +468,7 @@ async function loadFonts() {
   try {
     const response = await fetch(`${extensionFolderPath}/font-family.json`);
     const fonts = await response.json();
-    const select = $("#text_image_font_family").empty();
+    const select = $("#tti_font_family").empty();
 
     const fontPromises = fonts.map(async (font) => {
       const option = document.createElement("option");
@@ -739,6 +819,56 @@ function fontColor(event) {
   saveSettings();
   refreshPreview();
 }
+function useItalicColor(event) {
+  extension_settings[extensionName].useItalicColor = event.target.checked;
+  saveSettings();
+  refreshPreview();
+}
+function italicFontColor(event) {
+  extension_settings[extensionName].italicFontColor = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
+function useBoldColor(event) {
+  extension_settings[extensionName].useBoldColor = event.target.checked;
+  saveSettings();
+  refreshPreview();
+}
+function boldFontColor(event) {
+  extension_settings[extensionName].boldFontColor = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
+function useBoldItalicColor(event) {
+  extension_settings[extensionName].useBoldItalicColor = event.target.checked;
+  saveSettings();
+  refreshPreview();
+}
+function boldItalicFontColor(event) {
+  extension_settings[extensionName].boldItalicFontColor = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
+function useStrikethroughColor(event) {
+  extension_settings[extensionName].useStrikethroughColor = event.target.checked;
+  saveSettings();
+  refreshPreview();
+}
+function strikethroughFontColor(event) {
+  extension_settings[extensionName].strikethroughFontColor = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
+function useUnderlineColor(event) {
+  extension_settings[extensionName].useUnderlineColor = event.target.checked;
+  saveSettings();
+  refreshPreview();
+}
+function underlineFontColor(event) {
+  extension_settings[extensionName].underlineFontColor = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
 function aspectRatio(event) {
   extension_settings[extensionName].imageRatio = event.target.value;
   saveSettings();
@@ -816,6 +946,7 @@ function enableMarkdown(text) {
   let bold = false;
   let italic = false;
   let strikethrough = false;
+  let underline = false;
   let fontColor = null;
   let bgColor = null;
   let i = 0;
@@ -823,28 +954,33 @@ function enableMarkdown(text) {
 
   while (i < text.length) {
     if (text.slice(i, i + 3) === "***") {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
       bold = !bold;
       italic = !italic;
       currentText = "";
       i += 3;
     } else if (text.slice(i, i + 2) === "**") {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
       bold = !bold;
       currentText = "";
       i += 2;
+    } else if (text.slice(i, i + 2) === "__") {
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
+      underline = !underline;
+      currentText = "";
+      i += 2;
     } else if (text.slice(i, i + 2) === "~~") {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
       strikethrough = !strikethrough;
       currentText = "";
       i += 2;
     } else if (text[i] === "*" && (i + 1 >= text.length || text[i + 1] !== "*")) {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
       italic = !italic;
       currentText = "";
       i++;
     } else if (text.slice(i, i + 2) === "=(" && i + 2 < text.length) {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
       currentText = "";
       colorHighlight = true;
 
@@ -865,7 +1001,7 @@ function enableMarkdown(text) {
         colorHighlight = false;
       }
     } else if (text[i] === "=" && colorHighlight) {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
       fontColor = null;
       bgColor = null;
       currentText = "";
@@ -877,7 +1013,7 @@ function enableMarkdown(text) {
     }
   }
 
-  if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
+  if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
   return spans;
 }
 
@@ -906,10 +1042,10 @@ function wrappingTexts(text, mode = "word") {
         lineCount = 0;
       } else {
         if (mode === "word") {
-          currentPage.push([{ text: "", bold: false, italic: false, strikethrough: false, fontColor: null, bgColor: null }]);
+          currentPage.push([{ text: "", bold: false, italic: false, strikethrough: false, underline: false, fontColor: null, bgColor: null }]);
         } else {
           currentPage.push({
-            spans: [{ text: "", bold: false, italic: false, strikethrough: false }],
+            spans: [{ text: "", bold: false, italic: false, strikethrough: false, underline: false }],
             softBreak: false,
           });
         }
@@ -943,6 +1079,7 @@ function wrappingTexts(text, mode = "word") {
             bold: span.bold,
             italic: span.italic,
             strikethrough: span.strikethrough,
+            underline: span.underline,
             fontColor: span.fontColor,
             bgColor: span.bgColor,
           });
@@ -963,6 +1100,7 @@ function wrappingTexts(text, mode = "word") {
             bold: span.bold,
             italic: span.italic,
             strikethrough: span.strikethrough,
+            underline: span.underline,
             fontColor: span.fontColor,
             bgColor: span.bgColor,
           }];
@@ -1070,23 +1208,40 @@ function generateTextImage(chunk, index) {
     const textWidth = metrics.width;
     const textHeight = fontSize;
 
-    ctx.fillStyle = span.fontColor || settings.fontColor || "#000000";
+    let textColor = settings.fontColor || "#000000";
+    if (span.fontColor) {
+      textColor = span.fontColor;
+    } else {
+      if (span.strikethrough && settings.useStrikethroughColor) {
+        textColor = settings.strikethroughFontColor || textColor;
+      } else if (span.underline && settings.useUnderlineColor) {
+        textColor = settings.underlineFontColor || textColor;
+      } else if (span.bold && span.italic && settings.useBoldItalicColor) {
+        textColor = settings.boldItalicFontColor || textColor;
+      } else if (span.bold && !span.italic && settings.useBoldColor) {
+        textColor = settings.boldFontColor || textColor;
+      } else if (!span.bold && span.italic && settings.useItalicColor) {
+        textColor = settings.italicFontColor || textColor;
+      }
+    }
+
+    ctx.fillStyle = textColor;
     if (strokeWidth > 0) {
-        ctx.strokeStyle = ctx.fillStyle;
-        ctx.lineWidth = strokeWidth;
+      ctx.strokeStyle = textColor;
+      ctx.lineWidth = strokeWidth;
     }
 
     if (span.bgColor) {
-        const paddingX = 2;
-        const paddingY = 2;
-        ctx.fillStyle = span.bgColor;
-        ctx.fillRect(
+      const paddingX = 2;
+      const paddingY = 2;
+      ctx.fillStyle = span.bgColor;
+      ctx.fillRect(
         x - paddingX,
         y - textHeight + paddingY,
         textWidth + 2 * paddingX,
         textHeight + 2 * paddingY
-        );
-        ctx.fillStyle = span.fontColor || settings.fontColor || "#000000";
+      );
+      ctx.fillStyle = textColor;
     }
 
     if (strokeWidth > 0) ctx.strokeText(span.text, x, y);
@@ -1096,7 +1251,16 @@ function generateTextImage(chunk, index) {
       ctx.beginPath();
       ctx.moveTo(x, y - textHeight / 3);
       ctx.lineTo(x + textWidth, y - textHeight / 3);
-      ctx.strokeStyle = span.fontColor || settings.fontColor || "#000000";
+      ctx.strokeStyle = textColor;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    if (span.underline) {
+      ctx.beginPath();
+      ctx.moveTo(x, y + 4);
+      ctx.lineTo(x + textWidth, y + 4);
+      ctx.strokeStyle = textColor;
       ctx.lineWidth = 1;
       ctx.stroke();
     }
@@ -1497,13 +1661,23 @@ jQuery(async () => {
   setupWordReplacer();
   setupImageConvertButton();
 
-  $("#text_image_font_family").on("change", fontFamily);
-  $("#text_image_font_size").on("change", fontSize);
-  $("#text_image_font_align").on("change", fontAlign);
-  $("#text_image_font_color").on("change", fontColor);
-  $("#text_image_stroke_width").on("change", strokeWidth);
-  $("#text_image_line_break").on("change", lineBreak);
-  $("#text_image_ratio").on("change", aspectRatio);
+  $("#tti_font_family").on("change", fontFamily);
+  $("#tti_font_size").on("change", fontSize);
+  $("#tti_font_align").on("change", fontAlign);
+  $("#tti_font_color").on("change", fontColor);
+  $("#use_italic_color").on("change", useItalicColor);
+  $("#tti_italic_font_color").on("change", italicFontColor);
+  $("#use_bold_color").on("change", useBoldColor);
+  $("#tti_bold_font_color").on("change", boldFontColor);
+  $("#use_boldItalic_color").on("change", useBoldItalicColor);
+  $("#tti_boldItalic_font_color").on("change", boldItalicFontColor);
+  $("#use_strikethrough_color").on("change", useStrikethroughColor);
+  $("#tti_strikethrough_font_color").on("change", strikethroughFontColor);
+  $("#use_underline_color").on("change", useUnderlineColor);
+  $("#tti_underline_font_color").on("change", underlineFontColor);
+  $("#tti_stroke_width").on("change", strokeWidth);
+  $("#tti_line_break").on("change", lineBreak);
+  $("#tti_ratio").on("change", aspectRatio);
   $("#text_to_image").on("change", refreshPreview);
   $("#use_background_color").on("change", useBackgroundColor);
   $("#background_color").on("change", backgroundColor);
@@ -1528,9 +1702,18 @@ jQuery(async () => {
       $siblings.slideToggle();
     });
   });
+  let deletedText = "";
   $("#clear_text_btn").on("click", () => {
+    deletedText = $("#text_to_image").val();
     $("#text_to_image").val("");
     refreshPreview();
+  });
+  $("#restore_text_btn").on("click", () => {
+    if (deletedText !== "") {
+      $("#text_to_image").val(deletedText);
+      refreshPreview();
+      deletedText = "";
+    }
   });
   $("#create_preset").on("click", () => {
     $("#preset_name").val("");

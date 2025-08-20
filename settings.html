@@ -7,15 +7,19 @@
     <div class="inline-drawer-content">
       <div id="how_to_use">
         <b>사용법 (v1.2.9)</b>
-        <a href="https://xaxaxaxakk.github.io/txt-to-img/" target="_blank"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+        <a href="https://xaxaxaxakk.github.io/txt-to-img/" target="_blank">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i>
+        </a>
       </div>
       <div class="how_to_use_box">
         <span>
           ▶️ v1.2.9
           <br />
-          - 마크다운 문법 추가 (***볼드이탤릭***, ~~취소선~~)
+          - 마크다운 문법 추가 (***볼드이탤릭***, ~~취소선~~, __밑줄__)
           <br />
           - 폰트 추가 (온글잎 대롱체, 교보손글씨 2024 박서우, 온글잎 지우쏘낭)
+          <br />
+          - 마크다운 텍스트 전용 옵션 추가
         </span>
         <span>🔹 각종 옵션들을 설정한 다음 미리보기 확인 후 다운로드</span>
         <span>🔹 설정한 옵션을 계속 사용하고자 한다면 프리셋에 저장하기</span>
@@ -65,40 +69,53 @@
         </span>
       </div>
       <div class="flex-container">
-        <h4>💾 프리셋</h4>
-        <input type="text" id="preset_name" placeholder="프리셋 이름" />
-        <button id="create_preset" class="text-to-image-btn">
-          <i class="fa-solid fa-check"></i>
-        </button>
-        <div class="flex-container">
+        <h4>
+          <i class="fa-solid fa-floppy-disk"></i>
+          프리셋
+        </h4>
+        <div class="preset-control">
+          <input type="text" id="preset_name" placeholder="프리셋 이름" />
+          <button id="create_preset" class="buttons">
+            <i class="fa-solid fa-check"></i>
+          </button>
+        </div>
+        <div class="preset-control">
           <select id="preset_selector" class="text-to-image-select"></select>
-          <div class="preset-buttons">
-            <button id="save_preset" class="text-to-image-btn">
+          <span>
+            <button id="save_preset" class="buttons">
               <i class="fa-solid fa-floppy-disk"></i>
             </button>
-            <button id="rename_preset" class="text-to-image-btn">
+            <button id="rename_preset" class="buttons">
               <i class="fa-solid fa-pen"></i>
             </button>
-            <button id="delete_preset" class="text-to-image-btn clear">
+            <button id="delete_preset" class="buttons clear">
               <i class="fa-solid fa-trash"></i>
             </button>
-          </div>
+          </span>
         </div>
       </div>
 
       <div class="flex-container">
-        <h4>✒️ 텍스트 입력</h4>
-        <div class="flex-container">
-          <textarea id="text_to_image" placeholder=""></textarea>
-          <div id="clear_text_btn" class="clear-btn">
+        <h4>
+          <i class="fa-solid fa-pen"></i>
+          텍스트 입력
+        </h4>
+        <textarea id="text_to_image" placeholder="여기에 텍스트를 입력하세요"></textarea>
+        <div class="text-field-buttons">
+          <button id="clear_text_btn" class="clear-btn">
             <i class="fa-solid fa-eraser"></i>
             내용 삭제
-          </div>
+          </button>
+          <button id="restore_text_btn" class="buttons">
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
         </div>
-      </div>      
+      </div>
 
       <div class="tab-container">
-        <button class="tab-btn" data-tab="text-replacer"><i class="fa-solid fa-arrow-right-arrow-left"></i></button>
+        <button class="tab-btn" data-tab="text-replacer">
+          <i class="fa-solid fa-arrow-right-arrow-left"></i>
+        </button>
         <button class="tab-btn" data-tab="text-style"><i class="fa-solid fa-font"></i></button>
         <button class="tab-btn" data-tab="background"><i class="fa-solid fa-image"></i></button>
         <button class="tab-btn" data-tab="image-style"><i class="fa-solid fa-droplet"></i></button>
@@ -123,14 +140,14 @@
           <input type="text" id="original_word_4" class="replacer_box" placeholder="원래 단어" />
           <input type="text" id="replacement_word_4" class="replacer_box" placeholder="바꿀 단어" />
         </div>
-        <div class="flex-container justify-center">
-          <button id="clear_replace" class="text-to-image-btn">
+        <div class="replace-buttons">
+          <button id="clear_replace" class="buttons clear">
             <i class="fa-solid fa-eraser"></i>
           </button>
-          <button id="apply_replacement" class="text-to-image-btn">
+          <button id="apply_replacement" class="buttons">
             <i class="fa-solid fa-pen-nib"></i>
           </button>
-          <button id="restore_text" class="text-to-image-btn">
+          <button id="restore_text" class="buttons">
             <i class="fa-solid fa-rotate-right"></i>
           </button>
         </div>
@@ -138,135 +155,128 @@
 
       <div id="text-style" class="tab-content flex-container">
         <h4>텍스트 스타일 설정</h4>
-        <div class="flex-container">
-          <label for="text_image_font_family">글꼴</label>
-          <select id="text_image_font_family"></select>
-        </div>
-        <div class="flex-container">
-          <label for="text_image_stroke_width">두께</label>
-          <select id="text_image_stroke_width">
-            <option value="0">기본</option>
-            <option value="0.8">세미 볼드</option>
-            <option value="1.5">볼드</option>
-          </select>
-        </div>
-        <div class="flex-container">
-          <label for="text_image_font_size">사이즈</label>
-          <select id="text_image_font_size">
-            <option value="20px">20px</option>
-            <option value="24px">24px</option>
-            <option value="28px">28px</option>
-            <option value="32px">32px</option>
-            <option value="36px">36px</option>
-            <option value="40px">40px</option>
-            <option value="44px">44px</option>
-          </select>
-        </div>
-        <div class="flex-container">
-          <label for="text_image_font_align">정렬</label>
-          <select id="text_image_font_align">
-            <option value="left">왼쪽</option>
-            <option value="center">중앙</option>
-            <option value="right">오른쪽</option>
-          </select>
-        </div>
-        <div class="flex-container">
-          <label for="text_image_font_color">색상</label>
-          <input type="color" id="text_image_font_color" value="#000000" />
-        </div>
-        <div class="flex-container">
-          <label for="text_image_line_break">줄바꿈</label>
-          <select id="text_image_line_break">
-            <option value="byWord">단어 기준</option>
-            <option value="byChar">글자 기준</option>
-          </select>
+        <label>글꼴</label>
+        <select id="tti_font_family"></select>
+        <label>두께</label>
+        <select id="tti_stroke_width">
+          <option value="0">기본</option>
+          <option value="0.8">세미 볼드</option>
+          <option value="1.5">볼드</option>
+        </select>
+        <label>사이즈</label>
+        <select id="tti_font_size">
+          <option value="20px">20px</option>
+          <option value="24px">24px</option>
+          <option value="28px">28px</option>
+          <option value="32px">32px</option>
+          <option value="36px">36px</option>
+          <option value="40px">40px</option>
+          <option value="44px">44px</option>
+        </select>
+        <label>정렬</label>
+        <select id="tti_font_align">
+          <option value="left">왼쪽</option>
+          <option value="center">중앙</option>
+          <option value="right">오른쪽</option>
+        </select>
+        <label>색상</label>
+        <input type="color" id="tti_font_color" value="#000000" />
+        <label for="tti_line_break">줄바꿈</label>
+        <select id="tti_line_break">
+          <option value="byWord">단어 기준</option>
+          <option value="byChar">글자 기준</option>
+        </select>
+
+        <div id="custom-font-color" class="flex-container">
+          <h4>스타일 개별 색상</h4>
+          <div class="italic-custom">
+            <input type="checkbox" id="use_italic_color" name="use_italic_color" />
+            <label>이탤릭</label>
+            <input type="color" id="tti_italic_font_color" value="#000000" />
+          </div>
+          <div class="bold-custom">
+            <input type="checkbox" id="use_bold_color" name="use_bold_color" />
+            <label>볼드</label>
+            <input type="color" id="tti_bold_font_color" value="#000000" />
+          </div>
+          <div class="boldItalic-custom">
+            <input type="checkbox" id="use_boldItalic_color" name="use_boldItalic_color" />
+            <label>볼드이탤릭</label>
+            <input type="color" id="tti_boldItalic_font_color" value="#000000" />
+          </div>
+          <div class="strikethrough-custom">
+            <input type="checkbox" id="use_strikethrough_color" name="use_strikethrough_color" />
+            <label>취소선</label>
+            <input type="color" id="tti_strikethrough_font_color" value="#000000" />
+          </div>
+          <div class="underline-custom">
+            <input type="checkbox" id="use_underline_color" name="use_underline_color" />
+            <label>밑줄</label>
+            <input type="color" id="tti_underline_font_color" value="#000000" />
+          </div>
         </div>
       </div>
 
       <div id="background" class="tab-content flex-container">
         <h4>배경 종류 선택</h4>
-        <div class="flex-container">
-          <h5>
-            <i class="fa-solid fa-palette"></i>
-            배경 색상
-          </h5>
+        <h5>배경 색상</h5>
+        <div class="bgColor">
           <input type="checkbox" id="use_background_color" name="use_background_color" />
           <input type="color" id="background_color" name="background_color" />
         </div>
-        <div class="flex-container">
-          <h5>
-            <i class="fa-solid fa-image"></i>
-            배경 이미지
-          </h5>
-          <div id="background_image_gallery" class="background-gallery"></div>
+        <h5>
+          <i class="fa-solid fa-image"></i>
+          배경 이미지
+        </h5>
+        <div id="background_image_gallery" class="background-gallery"></div>
+        <h5 class="custom-bg">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          커스텀 이미지
+        </h5>
+        <div class="custom-bg-upload">
+          <label for="bg_image_upload" class="upload-btn">이미지 업로드</label>
+          <input type="file" id="bg_image_upload" accept="image/*" style="display: none" />
         </div>
-        <div class="flex-container">
-          <h5>
-            <i class="fa-solid fa-cloud-arrow-up"></i>
-            커스텀 이미지
-          </h5>
-          <div class="custom-bg-upload">
-            <label for="bg_image_upload" class="upload-btn">이미지 업로드</label>
-            <input type="file" id="bg_image_upload" accept="image/*" style="display: none" />
-          </div>
-          <div id="custom_background_gallery" class="background-gallery"></div>
-        </div>
+        <div id="custom_background_gallery" class="background-gallery"></div>
       </div>
 
       <div id="image-style" class="tab-content flex-container">
         <h4>이미지 스타일 설정</h4>
-        <div class="flex-container">
-          <label for="text_image_ratio">비율</label>
-          <select id="text_image_ratio">
-            <option value="square">정사각형</option>
-            <option value="rectangular">직사각형</option>
-            <option value="longer">더 길게</option>
-          </select>
-        </div>
-        <div class="flex-container">
-          <label for="bg_blur">블러</label>
-          <input type="range" id="bg_blur" min="0" max="10" step="0.1" />
-        </div>
-        <div class="flex-container">
-          <label for="bg_brightness">밝기</label>
-          <input type="range" id="bg_brightness" min="40" max="180" step="5" />
-        </div>
-        <div class="flex-container">
-          <label for="bg_grayscale">흑백</label>
-          <input type="range" id="bg_grayscale" min="0" max="100" step="1" />
-        </div>
-        <div class="flex-container">
-          <label for="bg_hue">색조</label>
-          <input type="range" id="bg_hue" min="0" max="360" step="3" />
-        </div>
-        <div class="flex-container">
-          <label for="bg_noise">노이즈</label>
-          <input type="range" id="bg_noise" min="0" max="100" step="1" />
-        </div>
-        <div class="flex-container">
-          <label for="overlay_opacity">오버레이</label>
-          <input type="range" id="overlay_opacity" min="0" max="1" step="0.01" />
-        </div>
-        <div class="flex-container">
-          <label for="overlay_color">오버레이색</label>
-          <input type="color" id="overlay_color" />
-        </div>
+        <label>비율</label>
+        <select id="tti_ratio">
+          <option value="square">정사각형</option>
+          <option value="rectangular">직사각형</option>
+          <option value="longer">더 길게</option>
+        </select>
+        <label>블러</label>
+        <input type="range" id="bg_blur" min="0" max="10" step="0.1" />
+        <label>밝기</label>
+        <input type="range" id="bg_brightness" min="40" max="180" step="5" />
+        <label>흑백</label>
+        <input type="range" id="bg_grayscale" min="0" max="100" step="1" />
+        <label>색조</label>
+        <input type="range" id="bg_hue" min="0" max="360" step="3" />
+        <label>노이즈</label>
+        <input type="range" id="bg_noise" min="0" max="100" step="1" />
+        <label>오버레이</label>
+        <input type="range" id="overlay_opacity" min="0" max="1" step="0.01" />
+        <label>오버레이색</label>
+        <input type="color" id="overlay_color" />
       </div>
 
       <div id="footer" class="tab-content flex-container">
         <h4>바닥글 추가</h4>
-        <div class="flex-container">
-          <label for="footer_text">텍스트</label>
-          <input type="text" id="footer_text" placeholder="" />
-        </div>
-        <div class="flex-container">
-          <label for="footer_color">색상</label>
-          <input type="color" id="footer_color" />
-        </div>
+        <label>텍스트</label>
+        <input type="text" id="footer_text" placeholder="" />
+        <label>색상</label>
+        <input type="color" id="footer_color" />
       </div>
 
       <div class="flex-container" id="image_preview_box">
-        <h4>🔎 미리보기</h4>
+        <h4>
+          <i class="fa-solid fa-eye"></i>
+          미리보기
+        </h4>
         <div id="image_preview_container" class="image-preview"></div>
       </div>
     </div>
