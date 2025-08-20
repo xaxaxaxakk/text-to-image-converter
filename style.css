@@ -16,10 +16,12 @@
   textarea,
   input,
   textarea:not(#send_textarea),
-  span:not([class*="fa"]):not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.fass):not(.fasr):not(.fasl):not(.fasd),
+  span:not([class*="fa"]):not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.fass):not(
+      .fasr
+    ):not(.fasl):not(.fasd),
   select {
     font-family: "Pretendard-Regular" !important;
-    
+
     color: #2c3e50 !important;
   }
 
@@ -98,6 +100,9 @@
   }
 
   /* 프리셋 */
+  & #import_preset {
+    margin-left: auto;
+  }
   & #preset_name {
     width: calc(100% - 60px) !important;
     height: 40px !important;

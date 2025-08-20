@@ -462,7 +462,64 @@ function updatePresetSelector(selectedPreset = null) {
     $selector.val(extension_settings[extensionName].currentPreset);
   }
 }
-
+function backupPreset() {
+  const presetName = $("#preset_selector").val();
+  const presets = extension_settings[extensionName].presets;
+  const presetData = {
+    name: presetName,
+    settings: presets[presetName],
+  };
+  const dataStr = JSON.stringify(presetData, null, 2);
+  const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
+  const exportFileName = `${presetName}.json`;
+  const linkElement = document.createElement("a");
+  linkElement.setAttribute("href", dataUri);
+  linkElement.setAttribute("download", exportFileName);
+  linkElement.click();
+}
+function importPreset(event) {
+  const file = event.target.files[0];
+  if (!file) {
+    return;
+  }
+  const fileReader = new FileReader();
+  fileReader.onload = function (e) {
+    try {
+      const presetData = JSON.parse(e.target.result);
+      let importName = presetData.name;
+      const presets = extension_settings[extensionName].presets;
+      if (presets[importName]) {
+        let counter = 1;
+        let newName = `${importName}_${counter}`;
+        while (presets[newName]) {
+          counter++;
+          newName = `${importName}_${counter}`;
+        }
+        importName = newName;
+      }
+      presets[importName] = presetData.settings;
+      extension_settings[extensionName].currentPreset = importName;
+      saveSettings();
+      updatePresetSelector(importName);
+      applyPreset(importName);
+    } catch (error) {}
+    event.target.value = "";
+  };
+  fileReader.readAsText(file);
+}
+function presetBackupSys() {
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.id = "presetBackupSys";
+  fileInput.accept = ".json";
+  fileInput.style.display = "none";
+  fileInput.addEventListener("change", importPreset);
+  document.body.appendChild(fileInput);
+  $("#backup_preset").on("click", backupPreset);
+  $("#import_preset").on("click", function () {
+    $("#presetBackupSys").click();
+  });
+}
 
 async function loadFonts() {
   try {
@@ -1657,6 +1714,7 @@ jQuery(async () => {
   await initSettings();
 
   presetUI();
+  presetBackupSys();
   customBG();
   setupWordReplacer();
   setupImageConvertButton();
