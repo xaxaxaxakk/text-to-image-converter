@@ -1780,6 +1780,10 @@ function setupImageConvertButton() {
 function setExtractText(text) {
   $("#text_to_image").val(text);
 
+  if (currentCustomFont) {
+    extension_settings[extensionName].fontFamily = currentCustomFont;
+  }
+
   const original1 = $("#original_word_1").val().trim();
   const replacement1 = $("#replacement_word_1").val().trim();
   const original2 = $("#original_word_2").val().trim();
