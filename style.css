@@ -1,12 +1,11 @@
 .text-to-image-converter-settings .inline-drawer-content {
   width: 100%;
   margin: 0 auto;
-  padding: 15px;
+  padding: 5px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 20px;
   background: linear-gradient(135deg, #e0e7ffab 0%, #fce7f388 100%);
   box-sizing: border-box !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 
   & * {
     text-shadow: none !important;
@@ -20,9 +19,8 @@
       .fasr
     ):not(.fasl):not(.fasd),
   select {
-    font-family: "Pretendard-Regular" !important;
-
     color: #2c3e50 !important;
+    font-family: "Pretendard-Regular" !important;
   }
 
   /* 사용법 설명서 */
@@ -40,7 +38,7 @@
       border-color: #007bff !important;
     }
     & i {
-      margin-right: 5px;
+      margin-left: 10px;
       color: #007bff !important;
       vertical-align: top;
     }
@@ -48,17 +46,20 @@
   & .how_to_use_box {
     display: none;
     margin-bottom: 20px;
-    padding: 10px 20px;
+    padding: 10px;
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 20px;
     background: rgba(255, 255, 255, 0.4);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 
     & > span {
-      margin: 16px 0;
+      margin-bottom: 16px;
       padding: 15px;
       border-radius: 5px;
       border-left: 5px solid #007bff !important;
+    }
+    & > span:last-of-type {
+      margin-bottom: 0;
     }
     & span {
       display: block !important;
@@ -81,8 +82,8 @@
   /* 기본 디자인 */
   & .flex-container {
     width: 100%;
-    margin-bottom: 15px;
-    padding: 14px;
+    margin-bottom: 10px;
+    padding: 6px 10px;
     border: 1px solid rgba(255, 255, 255, 0.5) !important;
     border-radius: 15px;
     background: rgba(255, 255, 255, 0.4);
@@ -91,18 +92,22 @@
     display: flex;
     align-items: center;
     width: 100%;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
     color: #2c3e50 !important;
-    font-size: 18px !important;
+    font-size: 16px !important;
     gap: 8px;
   }
   & h5 {
     margin: 15px 0;
+    font-size: 15px !important;
   }
 
   /* 프리셋 */
+  & #import_preset {
+    margin-left: auto;
+  }
   & #preset_name {
-    width: calc(100% - 60px) !important;
+    width: calc(100% - 55px) !important;
     height: 40px !important;
     padding: 12px;
     border: 1px solid rgba(255, 255, 255, 0.5) !important;
@@ -119,7 +124,7 @@
     margin-top: 10px;
   }
   & #preset_selector {
-    width: calc(100% - 170px) !important;
+    width: calc(100% - 150px) !important;
     height: 40px !important;
     margin: 0 !important;
     border: 1px solid rgba(255, 255, 255, 0.5) !important;
@@ -174,7 +179,7 @@
     margin-top: 15px;
   }
   & #clear_text_btn {
-    width: calc(100% - 60px);
+    width: calc(100% - 55px);
     height: 100%;
     border: none;
     border-radius: 10px;
@@ -235,7 +240,7 @@
   & input[type="color"] {
     width: calc(100% - 100px);
     height: 45px;
-    margin: 5px 0 10px;
+    margin: 5px 0;
     padding: 10px !important;
     border: none !important;
     border-radius: 10px;
@@ -265,9 +270,9 @@
     }
 
     &::-webkit-slider-thumb {
-      border: unset !important;
+      border: 0 !important;
       opacity: 1 !important;
-      box-shadow: unset !important;
+      box-shadow: none !important;
     }
   }
   & .tab-content label {
@@ -327,9 +332,13 @@
   & #custom-font-color {
     width: 100%;
     margin-top: 15px;
+    background: rgba(255, 255, 255, 0.6);
   }
 
   /* 배경이미지 커스텀 */
+  & #background {
+    container: gallery-grid / inline-size;
+  }
   & #background_color {
     width: calc(100% - 50px) !important;
   }
@@ -342,11 +351,21 @@
     padding: 10px;
     border-radius: 5px;
     background: rgba(255, 255, 255, 0.5);
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     overflow-y: auto;
 
     &:empty {
       display: none;
+    }
+  }
+  @container gallery-grid (max-width: 630px) {
+    & .background-gallery {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  @container gallery-grid (max-width: 330px) {
+    & .background-gallery {
+      grid-template-columns: repeat(3, 1fr);
     }
   }
   & .bg-image-item {
@@ -475,7 +494,6 @@
     }
   }
 }
-
 /* 폰트 리스트 */
 @font-face {
   font-family: "Pretendard-Regular";
