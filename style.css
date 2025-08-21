@@ -46,7 +46,7 @@
   & .how_to_use_box {
     display: none;
     margin-bottom: 20px;
-    padding: 10px;
+    padding: 6px;
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 20px;
     background: rgba(255, 255, 255, 0.4);
@@ -63,7 +63,7 @@
     }
     & span {
       display: block !important;
-      border: 1px solid rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.7);
       border-radius: 15px;
       background: rgba(255, 255, 255, 0.5);
       font-size: 14px !important;
@@ -71,8 +71,8 @@
 
       & > span {
         margin-top: 10px;
-        padding: 13px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
+        padding: 10px;
+        border: 1px solid rgba(221, 222, 241, 0.5);
         border-radius: 10px;
         background: rgba(255, 255, 255, 0.5);
       }
@@ -107,8 +107,8 @@
     margin-left: auto;
   }
   & #preset_name {
-    width: calc(100% - 55px) !important;
-    height: 40px !important;
+    width: calc(100% - 45px) !important;
+    height: 35px !important;
     padding: 12px;
     border: 1px solid rgba(255, 255, 255, 0.5) !important;
     border-radius: 10px;
@@ -124,8 +124,8 @@
     margin-top: 5px;
   }
   & #preset_selector {
-    width: calc(100% - 150px) !important;
-    height: 40px !important;
+    width: calc(100% - 140px) !important;
+    height: 35px !important;
     margin: 0 !important;
     border: 1px solid rgba(255, 255, 255, 0.5) !important;
     border-radius: 10px;
@@ -134,8 +134,8 @@
     font-size: 14px !important;
   }
   & .buttons {
-    width: 40px !important;
-    height: 40px !important;
+    width: 35px !important;
+    height: 35px !important;
     margin-left: auto;
     margin-left: 4px;
     border: none;
@@ -146,7 +146,7 @@
     cursor: pointer;
     transition: all 0.3s;
   }
-  & .buttons:hover {
+  & .buttons:not(:disabled):hover {
     background: #a29bfe !important;
     color: #fff !important;
   }
@@ -175,7 +175,7 @@
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    height: 40px;
+    height: 35px;
     margin-top: 15px;
   }
   & #clear_text_btn {
@@ -206,7 +206,7 @@
     flex: 1;
     justify-content: center;
     align-items: center;
-    height: 40px;
+    height: 35px;
     border: none;
     border-radius: 20px;
     background: rgba(255, 255, 255, 0.7);
@@ -238,8 +238,8 @@
   & .tab-content select,
   & input[type="text"],
   & input[type="color"] {
-    width: calc(100% - 95px);
-    height: 45px;
+    width: calc(100% - 70px);
+    height: 35px;
     margin: 5px 0;
     padding: 10px !important;
     border: none !important;
@@ -257,7 +257,7 @@
     }
   }
   & .tab-content input[type="range"] {
-    width: calc(100% - 100px) !important;
+    width: calc(100% - 70px) !important;
     height: auto !important;
     margin: 5px 0 !important;
     padding: 10px !important;
@@ -333,6 +333,34 @@
     width: 100%;
     margin-top: 15px;
     background: rgba(255, 255, 255, 0.6);
+  }
+  & #tti_font_family:disabled {
+    background: rgba(0, 0, 0, 0.07) !important;
+  }
+  & .custom-font-uploader {
+    display: flex;
+    width: 100%;
+    justify-content: flex-end !important;
+    margin-bottom: 20px;
+  }
+  & .custom-font-uploader .buttons {
+    width: calc(calc(100% - 70px) / 2 - 5px) !important;
+    font-family: "Pretendard-Regular" !important;
+  }
+  & #delete-local-font {
+    margin-left: 10px;
+
+    &:not(:disabled) {
+      background: rgba(255, 105, 97, 0.7) !important;
+      transition: all 0.3s;
+    }
+    &:not(:disabled):hover {
+      background: #ff6f61 !important;
+    }
+  }
+  & #delete-local-font:disabled {
+    background: rgba(0, 0, 0, 0.07) !important;
+    cursor: default;
   }
 
   /* 배경이미지 커스텀 */
@@ -490,7 +518,7 @@
     }
     #preset_selector {
       width: 100% !important;
-      height: 45px !important;
+      height: 35px !important;
     }
   }
 }
@@ -785,5 +813,47 @@
   font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2408@1.0/Ownglyph_jiwoosonang.woff2")
     format("woff2");
+  font-style: normal;
+}
+@font-face {
+  font-family: "TTBookendBatangR";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2410-2@1.0/TTBookendBatangR.woff2")
+    format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "JNE-Bareun-TTF-Bold";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2408-1@1.0/JNE-Bareun-TTF-Bold.woff2")
+    format("woff2");
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Ownglyph_Dailyokja-Rg";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2403@1.0/Ownglyph_Dailyokja-Rg.woff2")
+    format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "TTBookendBatangR";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2410-2@1.0/TTBookendBatangR.woff2")
+    format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "JNE-Bareun-TTF-Bold";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2408-1@1.0/JNE-Bareun-TTF-Bold.woff2")
+    format("woff2");
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Ownglyph_Dailyokja-Rg";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2403@1.0/Ownglyph_Dailyokja-Rg.woff2")
+    format("woff2");
+  font-weight: normal;
   font-style: normal;
 }
