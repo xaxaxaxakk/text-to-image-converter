@@ -121,7 +121,7 @@
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    margin-top: 10px;
+    margin-top: 5px;
   }
   & #preset_selector {
     width: calc(100% - 150px) !important;
@@ -238,7 +238,7 @@
   & .tab-content select,
   & input[type="text"],
   & input[type="color"] {
-    width: calc(100% - 100px);
+    width: calc(100% - 95px);
     height: 45px;
     margin: 5px 0;
     padding: 10px !important;
@@ -306,11 +306,11 @@
     display: flex;
     justify-content: space-between !important;
     flex-wrap: wrap;
-    padding: 5px 10px !important;
+    padding: 5px !important;
   }
   & .replacer_box {
+    margin: 0 !important;
     width: 48% !important;
-    margin-bottom: 10px !important;
     padding: 12px !important;
     border: none !important;
     border-radius: 10px;
