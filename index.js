@@ -128,6 +128,11 @@ function getPresetSettings() {
   const settings = {...extension_settings[extensionName]};
   delete settings.presets;
   delete settings.currentPreset;
+
+  if (currentCustomFont && oriFontFamily) {
+    settings.fontFamily = oriFontFamily;
+  }
+  
   settings.originalWord1 = $("#original_word_1").val();
   settings.replacementWord1 = $("#replacement_word_1").val();
   settings.originalWord2 = $("#original_word_2").val();
