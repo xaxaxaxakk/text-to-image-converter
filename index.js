@@ -545,21 +545,23 @@ function fontFamily(event) {
 
 // 폰트 로드
 async function loadFonts() {
-  const response = await fetch(`${extensionFolderPath}/font-family.json`);
-  const fonts = await response.json();
-  const select = $("#tti_font_family").empty();
+  try {
+    const response = await fetch(`${extensionFolderPath}/font-family.json`);
+    const fonts = await response.json();
+    const select = $("#tti_font_family").empty();
 
-  const fontPromises = fonts.map(async (font) => {
-    const option = document.createElement("option");
-    option.value = font.value;
-    option.textContent = font.label;
-    await document.fonts.load(`1em ${font.value}`);
-    select.append(`<option value="${font.value}">${font.label}</option>`);
-  });
+    const fontPromises = fonts.map(async (font) => {
+      const option = document.createElement("option");
+      option.value = font.value;
+      option.textContent = font.label;
+      await document.fonts.load(`1em ${font.value}`);
+      select.append(`<option value="${font.value}">${font.label}</option>`);
+    });
 
   await Promise.all(fontPromises);
-  select.val(extension_settings[extensionName].fontFamily);
-  refreshPreview();
+    select.val(extension_settings[extensionName].fontFamily);
+    refreshPreview();
+  } catch (error) {}
 }
 
 // 로컬 폰트 로드
