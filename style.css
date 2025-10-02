@@ -202,7 +202,7 @@
   /* 텍스트 입력 */
   & #text_to_image {
     width: 100%;
-    min-height: 150px;
+    min-height: 250px;
     padding: 12px;
     border: 1px solid rgba(255, 255, 255, 0.5) !important;
     border-radius: 10px;
