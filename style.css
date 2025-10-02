@@ -527,7 +527,7 @@
 @font-face {
   font-family: "Pretendard-Regular";
   font-weight: 400;
-  src: url("https://fastly.jsdelivr.net/gh/Project-Noonnu/noonfonts_2107@1.1/Pretendard-Regular.woff")
+  src: url("https://cdn.jsdelivr.net/gh/fonts-archive/Pretendard@main/Pretendard-Regular.woff2")
     format("woff");
   font-style: normal;
 }
