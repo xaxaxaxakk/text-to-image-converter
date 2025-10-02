@@ -38,6 +38,7 @@ const defaultSettings = {
   currentPreset: null,
   footerText: "",
   footerColor: "#000000",
+  autoPreview: true,
 };
 
 
@@ -73,6 +74,7 @@ async function initSettings() {
     currentPreset,
     footerText,
     footerColor,
+    autoPreview,
   } = extension_settings[extensionName];
 
   $("#tti_font_family").val(fontFamily);
@@ -103,6 +105,7 @@ async function initSettings() {
   $("#overlay_color").val(overlayColor);
   $("#footer_text").val(footerText);
   $("#footer_color").val(footerColor);
+  $("#preview_toggle").prop("checked", autoPreview);
 
   await loadFonts();
   await loadBG();
@@ -145,6 +148,7 @@ function getPresetSettings() {
   settings.backgroundColor = $("#background_color").val();
   settings.footerText = $("#footer_text").val();
   settings.footerColor = $("#footer_color").val();
+  settings.autoPreview = $("#preview_toggle").prop("checked");
   return settings;
 }
 function createPreset() {
@@ -253,6 +257,7 @@ function deletePreset() {
     );
     $("#footer_text").val("");
     $("#footer_color").val(defaultSettings.footerColor);
+    $("#preview_toggle").prop("checked", defaultSettings.autoPreview);
   }
   saveSettings();
   updatePresetSelector();
@@ -310,6 +315,7 @@ function selectPreset() {
     );
     $("#footer_text").val("");
     $("#footer_color").val(defaultSettings.footerColor);
+    $("#preview_toggle").prop("checked", defaultSettings.autoPreview);
 
     refreshPreview();
   } else if (presetName) {
@@ -446,6 +452,9 @@ function applyPreset(presetName) {
         break;
       case "footerColor":
         $("#footer_color").val(value);
+        break;
+      case "autoPreview":
+        $("#preview_toggle").prop("checked", value);
         break;
     }
   }
@@ -1071,7 +1080,26 @@ function footerColor(event) {
 }
 
 // 미리보기
+function autoPreview(event) {
+  extension_settings[extensionName].autoPreview = event.target.checked;
+  saveSettings();
+  if (event.target.checked) {
+    refreshPreview();
+  }
+  else {
+    $(".refresh-preview").addClass("shown");
+  }
+}
 function refreshPreview() {
+  $(".refresh-preview").removeClass("shown");  
+
+  if (!extension_settings[extensionName].autoPreview) {
+    $(".refresh-preview").addClass("shown");
+    $("#image_preview_container").empty();
+    $("#image_preview_box h4 .dl_all").remove();
+    return;
+  }
+
   const text = $("#text_to_image").val() || "";
   const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
   
@@ -1099,6 +1127,38 @@ function refreshPreview() {
     }
   } else {
     $dlAllBtn.remove();
+  }
+}
+function manualRefresh() {
+  if (!extension_settings[extensionName].autoPreview) {
+    const text = $("#text_to_image").val() || "";
+    const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
+    
+    const chunks = wrappingTexts(text, lineBreak === "byWord" ? "word" : "char");
+    
+    const $container = $("#image_preview_container").empty();
+
+    chunks.forEach((chunk, i) => {
+      $container.append(generateTextImage(chunk, i));
+    });
+
+    const imageCount = chunks.length;
+    const $previewTitle = $("#image_preview_box h4");
+    const $dlAllBtn = $previewTitle.find(".dl_all");
+
+    if (imageCount >= 2) {
+      if ($dlAllBtn.length === 0) {
+        const $newDlAllBtn = $(
+          '<div class="dl_all"><i class="fa-solid fa-circle-down"></i> 전체 다운로드</div>'
+        );
+        $previewTitle.append($newDlAllBtn);
+        $newDlAllBtn.on("click", () => {
+          autoDownload("#image_preview_container .download-btn", 500);
+        });
+      }
+    } else {
+      $dlAllBtn.remove();
+    }
   }
 }
 
@@ -1859,6 +1919,8 @@ jQuery(async () => {
   $("#footer_color").on("change", footerColor);
   $("#upload-local-font").on("click", addLocalFont);
   $("#delete-local-font").on("click", deleteLocalFont);
+  $("#preview_toggle").on("change", autoPreview);
+  $(".refresh-preview").on("click", manualRefresh);
 
   $("#how_to_use b").on("click", function () {
     $(this).parent().next(".how_to_use_box").slideToggle();

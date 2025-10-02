@@ -458,6 +458,57 @@
     color: #fff;
   }
 
+  /* 미리보기 제어 */
+  .preview-control {
+    margin-left: auto;    
+
+    & label {
+      width: auto !important;
+      font-size: 12px;
+      cursor: pointer;
+    }
+  }
+  #preview_toggle + label {
+    opacity: 0.5;
+  }
+  #preview_toggle + label::before {
+    margin-right: 3px;
+    font-family: "Font Awesome 7 Free";
+    font-size: 12px;
+    content: "\f204";
+  }
+  #preview_toggle:checked + label {
+    opacity: 1;
+  }
+  #preview_toggle:checked + label::before {
+    color: #a29bfe;
+    font-family: "Font Awesome 7 Free";
+    font-size: 12px;
+    content: "\f205";
+  }
+  .refresh-preview {
+    display: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 105, 97, 0.7);
+    font-size: 12px !important;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+
+    &.shown {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    &:hover {
+      background: rgba(255, 105, 97, 0.7);
+      color: #fff;
+    }
+  }
+
   /* 미리보기 다운로드 */
   & .dl_all {
     margin-left: auto;

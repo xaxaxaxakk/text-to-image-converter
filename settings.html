@@ -6,7 +6,7 @@
     </div>
     <div class="inline-drawer-content">
       <div id="how_to_use">
-        <b>V 1.3.0</b>
+        <b>V 1.3.1</b>
         <a href="https://xaxaxaxakk.github.io/txt-to-img/" target="_blank">
           <i class="fa-solid fa-arrow-up-right-from-square"></i>
         </a>
@@ -108,6 +108,14 @@
         <h4>
           <i class="fa-solid fa-pen"></i>
           텍스트 입력
+          <div class="preview-control">
+            <input
+              type="checkbox"
+              id="preview_toggle"
+              name="preview_toggle"
+              style="display: none" />
+            <label for="preview_toggle">미리보기</label>
+          </div>
         </h4>
         <textarea id="text_to_image" placeholder="여기에 텍스트를 입력하세요"></textarea>
         <div class="text-field-buttons">
@@ -295,6 +303,9 @@
         <h4>
           <i class="fa-solid fa-eye"></i>
           미리보기
+          <div class="refresh-preview">
+            <i class="fa-solid fa-arrows-rotate"></i>
+          </div>
         </h4>
         <div id="image_preview_container" class="image-preview"></div>
       </div>
