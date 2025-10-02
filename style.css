@@ -159,6 +159,42 @@
     color: #fff !important;
   }
 
+  /* 봇카드 */
+  .botCard {
+    display: inline-flex;
+    justify-content: space-between;
+  }
+  .botCard h4 {
+    width: 100px;
+    margin-bottom: 0 !important;
+    padding: 0 !important;
+  }
+  .bot-datas {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .bot-datas button {
+    flex: 1;
+    justify-content: center;
+    align-items: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.7);
+    color: #2c3e50;
+    cursor: pointer;
+    font-size: 12px !important;
+    transition: all 0.3s;
+
+    &:hover {
+      background: #a29bfe;
+      color: white;
+    }
+  }
+
   /* 텍스트 입력 */
   & #text_to_image {
     width: 100%;
@@ -460,7 +496,7 @@
 
   /* 미리보기 제어 */
   .preview-control {
-    margin-left: auto;    
+    margin-left: auto;
 
     & label {
       width: auto !important;

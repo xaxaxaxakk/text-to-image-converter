@@ -545,6 +545,88 @@ function presetBackupSys() {
   });
 }
 
+// 봇카드
+function loadBotCard(dataType) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".png,.json";
+
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      const botData = file.name.endsWith(".json")
+        ? await dataFromJSON(file)
+        : await dataFromPNG(file);
+      if (botData) botDataClass(botData, dataType);
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  input.click();
+}
+async function dataFromJSON(file) {
+  const text = await file.text();
+  return JSON.parse(text);
+}
+async function dataFromPNG(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const dataView = new DataView(arrayBuffer);
+  let offset = 8;
+
+  while (offset < arrayBuffer.byteLength) {
+    const chunkLength = dataView.getUint32(offset);
+    offset += 4;
+    const chunkType = String.fromCharCode(
+      dataView.getUint8(offset),
+      dataView.getUint8(offset + 1),
+      dataView.getUint8(offset + 2),
+      dataView.getUint8(offset + 3)
+    );
+    offset += 4;
+
+    if (chunkType === "tEXt") {
+      let textData = "";
+      for (let i = 0; i < chunkLength; i++) {
+        textData += String.fromCharCode(dataView.getUint8(offset + i));
+      }
+      const [keyword, text] = textData.split("\0");
+      if (keyword.toLowerCase() === "chara") {
+        try {
+          const binary = atob(text.trim());
+          const uint8Array = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) {
+            uint8Array[i] = binary.charCodeAt(i);
+          }
+          const decoded = new TextDecoder("utf-8").decode(uint8Array);
+          return JSON.parse(decoded);
+        } catch (error) {
+          return null;
+        }
+      }
+    }
+    offset += chunkLength;
+    offset += 4;
+  }
+  return null;
+}
+function botDataClass(data, dataType) {
+  const charData = data.data || data;
+  const content =
+    (dataType === "description"
+      ? charData.description
+      : dataType === "greeting"
+      ? charData.first_mes
+      : dataType === "scenario"
+      ? charData.scenario
+      : JSON.stringify(charData, null, 2)
+    )?.trim() || "";
+
+  $("#text_to_image").val(content);
+}
+
 // 폰트 패밀리
 function fontFamily(event) {
   extension_settings[extensionName].fontFamily = event.target.value;
@@ -1091,7 +1173,7 @@ function autoPreview(event) {
   }
 }
 function refreshPreview() {
-  $(".refresh-preview").removeClass("shown");  
+  $(".refresh-preview").removeClass("shown");
 
   if (!extension_settings[extensionName].autoPreview) {
     $(".refresh-preview").addClass("shown");
@@ -1962,4 +2044,9 @@ jQuery(async () => {
     $("#" + tabId).addClass("active");
   });
   $(".tab-btn").first().click();
+
+  $(`.bot-data[data-type]`).on("click", function () {
+    const dataType = $(this).data("type");
+    loadBotCard(dataType);
+  });
 });
