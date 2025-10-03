@@ -241,7 +241,7 @@
     margin-top: 15px;
   }
   & #clear_text_btn {
-    width: calc(100% - 55px);
+    width: 110px;
     height: 100%;
     border: none;
     border-radius: 10px;
