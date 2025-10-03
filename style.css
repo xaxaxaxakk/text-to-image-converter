@@ -183,20 +183,41 @@
     flex: 1;
     justify-content: center;
     align-items: center;
-    width: 35px;
-    height: 35px;
+    width: 30px;
+    height: 30px;
     border: none;
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.7);
     color: #2c3e50;
     cursor: pointer;
-    font-size: 11px !important;
+    font-size: 12px !important;
     transition: all 0.3s;
 
-    &:hover {
+    &:not(.botImporter):not(.botSaver:disabled):hover,
+    &.active {
       background: #a29bfe;
       color: white;
     }
+  }
+  & .bot-datas .botImporter {
+    background: #a29bfe;
+    color: #fff;
+
+    &::before {
+      content: "\f07c";  
+      font-family: "Font Awesome 7 Free";
+      font-weight: bold;
+    }
+  }
+  & .bot-datas .botImporter.remover {
+    background: rgba(255, 105, 97, 0.7);
+    &::before {
+      content: "\f2ed";
+    }
+  }
+  & .bot-datas .botSaver:disabled {
+    background: rgba(0, 0, 0, 0.07) !important;
+    cursor: default !important;
   }
 
   /* 텍스트 입력 */
