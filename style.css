@@ -95,7 +95,7 @@
     width: 100%;
     margin-bottom: 14px;
     color: #2c3e50 !important;
-    font-size: 16px !important;
+    font-size: 15px !important;
     gap: 8px;
   }
   & h5 {
@@ -163,6 +163,7 @@
   & .botCard {
     display: inline-flex;
     justify-content: space-between;
+    flex-wrap: wrap;
   }
   & .botCard h4 {
     width: 100px;
@@ -177,7 +178,8 @@
     display: flex;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
+    margin-left: auto;
   }
   & .bot-datas button {
     flex: 1;
@@ -519,9 +521,16 @@
     color: #fff;
   }
 
-  /* 미리보기 제어 */
-  .preview-control {
+  /* 미리보기 제어 / 치환 옵션 토글 */
+  & h4:has(.replace-control) {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  & :where(.preview-control, .replace-control) {
     margin-left: auto;
+    display: inline-flex;
+    gap: 10px;
+    flex-wrap: wrap;
 
     & label {
       width: auto !important;
@@ -529,19 +538,19 @@
       cursor: pointer;
     }
   }
-  #preview_toggle + label {
+  & :where(#preview_toggle, #letter_control, #unit_control) + label {
     opacity: 0.5;
   }
-  #preview_toggle + label::before {
+  & :where(#preview_toggle, #letter_control, #unit_control) + label::before {
     margin-right: 3px;
     font-family: "Font Awesome 7 Free";
     font-size: 12px;
     content: "\f204";
   }
-  #preview_toggle:checked + label {
+  & :where(#preview_toggle, #letter_control, #unit_control):checked + label {
     opacity: 1;
   }
-  #preview_toggle:checked + label::before {
+  & :where(#preview_toggle, #letter_control, #unit_control):checked + label::before {
     color: #a29bfe;
     font-family: "Font Awesome 7 Free";
     font-size: 12px;
