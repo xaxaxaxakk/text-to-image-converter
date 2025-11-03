@@ -875,16 +875,17 @@ async function loadFonts() {
   try {
     const response = await fetch(`${extensionFolderPath}/font-family.json`);
     const fonts = await response.json();
-    fonts.sort((a, b) => a.label.localeCompare(b.label));
     const select = $("#tti_font_family").empty();
 
-    const fontPromises = fonts.map(font => document.fonts.load(`1em ${font.value}`));
-    await Promise.all(fontPromises);
-    
-    fonts.forEach(font => {
+    const fontPromises = fonts.map(async (font) => {
+      const option = document.createElement("option");
+      option.value = font.value;
+      option.textContent = font.label;
+      await document.fonts.load(`1em ${font.value}`);
       select.append(`<option value="${font.value}">${font.label}</option>`);
     });
 
+  await Promise.all(fontPromises);
     select.val(extension_settings[extensionName].fontFamily);
     refreshPreview();
   } catch (error) {}
