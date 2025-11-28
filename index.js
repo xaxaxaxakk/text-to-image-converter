@@ -2259,16 +2259,25 @@ function setExtractText(text) {
 }
 
 jQuery(async () => {
-  $("#extensions_settings2").append(await $.get(`${extensionFolderPath}/settings.html`));
+  try {
+    const settingsHtml = await $.get(`${extensionFolderPath}/settings.html`);
+    $("#extensions_settings2").append(settingsHtml);
+    await initSettings();
+    presetUI();
+    presetBackupSys();
+    customBG();
+    setupWordReplacer();
+    setupImageConvertButton();
+    bindingFunctions();
+    restoreButtons();
+    tabButtons();
+    botCardButtons();
+  } catch (error) {
+    console.error("에러", error);
+  }
+});
 
-  await initSettings();
-
-  presetUI();
-  presetBackupSys();
-  customBG();
-  setupWordReplacer();
-  setupImageConvertButton();
-
+function bindingFunctions() {
   $("#tti_font_family").on("change", fontFamily);
   $("#tti_font_size").on("change", fontSize);
   $("#tti_font_align").on("change", fontAlign);
@@ -2308,14 +2317,15 @@ jQuery(async () => {
   $("#how_to_use b").on("click", function () {
     $(this).parent().next(".how_to_use_box").slideToggle();
   });
-  $("h4.toggle").each(function () {
-    const $this = $(this);
-    const $siblings = $this.siblings();
-    $siblings.hide();
-    $this.on("click", function () {
-      $siblings.slideToggle();
-    });
+
+  $("#create_preset").on("click", () => {
+    $("#preset_name").val("");
   });
+  $("#clear_replace").on("click", () => {
+    $(".replacer_box").val("");
+  });
+}
+function restoreButtons() {
   let deletedText = "";
   $("#clear_text_btn").on("click", () => {
     deletedText = $("#text_to_image").val();
@@ -2329,13 +2339,8 @@ jQuery(async () => {
       deletedText = "";
     }
   });
-  $("#create_preset").on("click", () => {
-    $("#preset_name").val("");
-  });
-  $("#clear_replace").on("click", () => {
-    $(".replacer_box").val("");
-  });
-
+}
+function tabButtons() {
   $(".tab-btn").click(function () {
     $(".tab-btn").removeClass("active");
     $(".tab-content").removeClass("active");
@@ -2362,7 +2367,8 @@ jQuery(async () => {
       toggleButton.text("열기");
     }
   });
-
+}
+function botCardButtons() {
   $(`.bot-data[data-type]`).on("click", function () {
     const dataType = $(this).data("type");
     const currentTab = $(".bot-data[data-type].active").data("type");
@@ -2389,4 +2395,4 @@ jQuery(async () => {
   $(".bot-data.botSaver").on("click", function () {
     botCardSaver();
   });
-});
+}
