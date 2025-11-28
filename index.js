@@ -2346,6 +2346,23 @@ jQuery(async () => {
   });
   $(".tab-btn").first().click();
 
+  $("#custom-font-color > h4 > span").on("click", function () {
+    const CFC = $("#custom-font-color");
+    const lists = CFC.find(".font-color-lists");
+    const toggleButton = $(this);
+    lists.slideUp();
+
+    if (CFC.hasClass("hide")) {
+      lists.stop().slideDown(200);
+      CFC.removeClass("hide").addClass("opened");
+      toggleButton.text("닫기");
+    } else {
+      lists.stop().slideUp(200);
+      CFC.removeClass("opened").addClass("hide");
+      toggleButton.text("열기");
+    }
+  });
+
   $(`.bot-data[data-type]`).on("click", function () {
     const dataType = $(this).data("type");
     const currentTab = $(".bot-data[data-type].active").data("type");
