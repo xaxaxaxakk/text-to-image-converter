@@ -8,7 +8,9 @@ const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 const defaultSettings = {
   fontFamily: "Pretendard-Regular",
   fontWeight: "normal",
-  fontSize: "24px",
+  fontSize: 24,
+  fontSpacing: 0,
+  fontLineHeight: 1.5,
   fontAlign: "left",
   fontColor: "#000000",
   useItalicColor: false,
@@ -29,6 +31,7 @@ const defaultSettings = {
   useSecondBackgroundColor: false,
   secondBackgroundColor: "#ffffff",
   imageRatio: "square",
+  imageFillMode: "cover",
   bgBlur: 0,
   bgBrightness: 100,
   bgHue: 0,
@@ -51,6 +54,8 @@ async function initSettings() {
   const {
     fontFamily,
     fontSize,
+    fontSpacing,
+    fontLineHeight,
     fontAlign,
     fontColor,
     useItalicColor,
@@ -66,6 +71,7 @@ async function initSettings() {
     strokeWidth,
     lineBreak,
     imageRatio,
+    imageFillMode,
     useBackgroundColor,
     backgroundColor,
     useSecondBackgroundColor,
@@ -87,6 +93,8 @@ async function initSettings() {
 
   $("#tti_font_family").val(fontFamily);
   $("#tti_font_size").val(fontSize);
+  $("#tti_letter_spacing").val(fontSpacing);
+  $("#tti_line_height").val(fontLineHeight);
   $("#tti_font_align").val(fontAlign);
   $("#tti_font_color").val(fontColor);
   $("#use_italic_color").prop("checked", useItalicColor);
@@ -102,6 +110,7 @@ async function initSettings() {
   $("#tti_stroke_width").val(strokeWidth);
   $("#tti_line_break").val(lineBreak);
   $("#tti_ratio").val(imageRatio);
+  $("#tti_fill_mode").val(imageFillMode);
   $("#use_background_color").prop("checked", useBackgroundColor);
   $("#background_color").val(backgroundColor);
   $("#use_second_background_color").prop("checked", useSecondBackgroundColor);
@@ -235,6 +244,8 @@ function deletePreset() {
 
     $("#tti_font_family").val(defaultSettings.fontFamily);
     $("#tti_font_size").val(defaultSettings.fontSize);
+    $("#tti_letter_spacing").val(defaultSettings.fontSpacing);
+    $("#tti_line_height").val(defaultSettings.fontLineHeight);
     $("#tti_font_align").val(defaultSettings.fontAlign);
     $("#tti_font_color").val(defaultSettings.fontColor);
     $("#use_italic_color").prop("checked", defaultSettings.useItalicColor);
@@ -250,6 +261,7 @@ function deletePreset() {
     $("#tti_stroke_width").val(defaultSettings.strokeWidth);
     $("#tti_line_break").val(defaultSettings.lineBreak);
     $("#tti_ratio").val(defaultSettings.imageRatio);
+    $("#tti_fill_mode").val(defaultSettings.imageFillMode);
     $("#bg_blur").val(defaultSettings.bgBlur);
     $("#bg_brightness").val(defaultSettings.bgBrightness);
     $("#bg_hue").val(defaultSettings.bgHue);
@@ -297,6 +309,8 @@ function selectPreset() {
     }
     $("#tti_font_family").val(defaultSettings.fontFamily);
     $("#tti_font_size").val(defaultSettings.fontSize);
+    $("#tti_letter_spacing").val(defaultSettings.fontSpacing);
+    $("#tti_line_height").val(defaultSettings.fontLineHeight);
     $("#tti_font_align").val(defaultSettings.fontAlign);
     $("#tti_font_color").val(defaultSettings.fontColor);
     $("#use_italic_color").prop("checked", defaultSettings.useItalicColor);
@@ -312,6 +326,7 @@ function selectPreset() {
     $("#tti_stroke_width").val(defaultSettings.strokeWidth);
     $("#tti_line_break").val(defaultSettings.lineBreak);
     $("#tti_ratio").val(defaultSettings.imageRatio);
+    $("#tti_fill_mode").val(defaultSettings.imageFillMode);
     $("#bg_blur").val(defaultSettings.bgBlur);
     $("#bg_brightness").val(defaultSettings.bgBrightness);
     $("#bg_hue").val(defaultSettings.bgHue);
@@ -395,6 +410,12 @@ function applyPreset(presetName) {
       case "fontSize":
         $("#tti_font_size").val(value);
         break;
+      case "fontSpacing":
+        $("#tti_letter_spacing").val(value);
+        break;
+      case "fontLineHeight":
+        $("#tti_line_height").val(value);
+        break;
       case "fontAlign":
         $("#tti_font_align").val(value);
         break;
@@ -439,6 +460,9 @@ function applyPreset(presetName) {
         break;
       case "imageRatio":
         $("#tti_ratio").val(value);
+        break;
+      case "imageFillMode":
+        $("#tti_fill_mode").val(value);
         break;
       case "bgBlur":
         $("#bg_blur").val(value);
@@ -1173,6 +1197,11 @@ function aspectRatio(event) {
   saveSettings();
   refreshPreview();
 }
+function bgFillMode(event) {
+  extension_settings[extensionName].imageFillMode = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
 
 // 단어 치환
 function letterCase(event) {
@@ -1417,6 +1446,16 @@ function fontSize(event) {
   saveSettings();
   refreshPreview();
 }
+function fontSpacing(event) {
+  extension_settings[extensionName].fontSpacing = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
+function fontLineHeight(event) {
+  extension_settings[extensionName].fontLineHeight = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
 function fontAlign(event) {
   extension_settings[extensionName].fontAlign = event.target.value;
   saveSettings();
@@ -1653,14 +1692,16 @@ function enableMarkdown(text) {
 
 // 텍스트 정리
 function wrappingTexts(text, mode = "word") {
+  const settings = extension_settings[extensionName];
+  
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   const { width, height } = getCanvasSize();
   const maxWidth = width - 80;
-  const fontSize = parseInt(extension_settings[extensionName].fontSize);
-  const lineHeight = fontSize * 1.5;
+  const fontSize = settings.fontSize;
+  const lineHeight = fontSize * parseFloat(settings.fontLineHeight);
 
-  const fullSize = extension_settings[extensionName].imageRatio === "full";
+  const fullSize = settings.imageRatio === "full";
   const maxLines = fullSize ? Infinity : Math.floor((height - 80 - lineHeight) / lineHeight);
 
   const pages = [];
@@ -1704,9 +1745,10 @@ function wrappingTexts(text, mode = "word") {
       units.forEach((unit) => {
         if (mode === "char" && (unit === " " || unit === "\t") && currentLine.length === 0) return;
 
-        const fontWeight = span.bold ? "bold" : extension_settings[extensionName].fontWeight;
+        const fontWeight = span.bold ? "bold" : settings.fontWeight;
         const fontStyle = span.italic ? "italic" : "normal";
-        ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${extension_settings[extensionName].fontFamily}`;
+        ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${settings.fontFamily}`;
+        ctx.letterSpacing = `${settings.fontSpacing}em`;
 
         const testText = currentLineText + unit;
         if (ctx.measureText(testText).width <= maxWidth) {
@@ -1807,9 +1849,15 @@ function isBlankLine(line, mode) {
 // 텍스트를 이미지로
 function generateTextImage(chunk, index) {
   const {width, height} = getCanvasSize();
-  const fontSize = parseInt(extension_settings[extensionName].fontSize);
-  const lineHeight = fontSize * 1.5;
   const settings = extension_settings[extensionName];
+
+  const fontSize = settings.fontSize;
+  const lineHeight = fontSize * parseFloat(settings.fontLineHeight);
+  const bgImage = settings.selectedBackgroundImage;
+  const useBgColor = settings.useBackgroundColor;
+  const bgColor = settings.backgroundColor;
+  const useSecondBgColor = settings.useSecondBackgroundColor;
+  const secondBgColor = settings.secondBackgroundColor;
 
   const isFullSize = settings.imageRatio === "full";
   const calcHeight = isFullSize
@@ -1829,7 +1877,7 @@ function generateTextImage(chunk, index) {
     let y = Math.max((calcHeight - totalTextHeight - footerHeight) / 2 + lineHeight, 40 + lineHeight / 2);
     const setAlign = settings.fontAlign || "left";
 
-    const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
+    const lineBreak = settings.lineBreak || "byWord";
     const maxLineWidth = width - 80;
 
     function setFont(span) {
@@ -1840,6 +1888,7 @@ function generateTextImage(chunk, index) {
 
     function renderSpan(span, x, y) {
       setFont(span);
+      ctx.letterSpacing = `${settings.fontSpacing}em`;
       const metrics = ctx.measureText(span.text);
       const textWidth = metrics.width;
       const textHeight = fontSize;
@@ -1907,6 +1956,7 @@ function generateTextImage(chunk, index) {
         line.forEach((span) => {
           setFont(span);
           const width = ctx.measureText(span.text).width;
+          ctx.letterSpacing = `${settings.fontSpacing}em`;
           measuredWidths.push(width);
           totalTextWidth += width;
         });
@@ -1940,6 +1990,7 @@ function generateTextImage(chunk, index) {
         line.forEach((span) => {
           setFont(span);
           const width = ctx.measureText(span.text).width;
+          ctx.letterSpacing = `${settings.fontSpacing}em`;
           measuredWidths.push(width);
           totalTextWidth += width;
         });
@@ -1967,29 +2018,86 @@ function generateTextImage(chunk, index) {
   };
 
   const textWallpaper = (img) => {
-    if (isFullSize) {
-      const pattern = ctx.createPattern(img, 'repeat');
-      ctx.fillStyle = pattern;
-      ctx.fillRect(0, 0, width, calcHeight);
-    } else {
-      let drawWidth,
-        drawHeight,
-        offsetX = 0,
-        offsetY = 0;
-      const imgRatio = img.width / img.height;
-      const canvasRatio = width / calcHeight;
+    const fillMode = settings.imageFillMode || "cover";
 
-      if (imgRatio > canvasRatio) {
-        drawHeight = calcHeight;
-        drawWidth = img.width * (calcHeight / img.height);
-        offsetX = (width - drawWidth) / 2;
+    const drawBackground = () => {
+      if (!useBgColor) return;
+      
+      if (useSecondBgColor) {
+        const gradient = ctx.createLinearGradient(0, 0, width, calcHeight);
+        gradient.addColorStop(0, bgColor);
+        gradient.addColorStop(0.4, bgColor);
+        gradient.addColorStop(1, secondBgColor);
+        ctx.fillStyle = gradient;
       } else {
-        drawWidth = width;
-        drawHeight = img.height * (width / img.width);
-        offsetY = (calcHeight - drawHeight) / 2;
+        ctx.fillStyle = bgColor;
       }
+      ctx.fillRect(0, 0, width, calcHeight);
+    };
+
+    if (fillMode === "pattern") {
+      if (useBgColor) {
+        drawBackground();
+      } else {
+        const scale = width / img.width;
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = width;
+        tempCanvas.height = img.height * scale;
+        const tempCtx = tempCanvas.getContext("2d");
+        tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+        
+        ctx.fillStyle = ctx.createPattern(tempCanvas, "repeat");
+        ctx.fillRect(0, 0, width, calcHeight);
+      }
+    } else if (fillMode === "mix-top" || fillMode === "mix-bottom") {
+      drawBackground();
+      
+      const scale = width / img.width;
+      const drawWidth = width;
+      const drawHeight = img.height * scale;
+      const offsetY = fillMode === "mix-top" ? 0 : calcHeight - drawHeight;
+      
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = width;
+      tempCanvas.height = calcHeight;
+      const tempCtx = tempCanvas.getContext("2d");
+      tempCtx.drawImage(img, 0, offsetY, drawWidth, drawHeight);
+      
+      const gradientHeight = Math.min(drawHeight * 0.4, calcHeight * 0.3);
+      const gradient = tempCtx.createLinearGradient(
+        0, 
+        fillMode === "mix-top" ? offsetY + drawHeight - gradientHeight : offsetY + gradientHeight,
+        0, 
+        fillMode === "mix-top" ? offsetY + drawHeight : offsetY
+      );
+      gradient.addColorStop(0, 'rgba(0,0,0,1)');
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      
+      tempCtx.globalCompositeOperation = 'destination-in';
+      tempCtx.fillStyle = gradient;
+      tempCtx.fillRect(0, 0, width, calcHeight);
+      
+      ctx.drawImage(tempCanvas, 0, 0);
+    } else {
+      if (useBgColor) {
+        drawBackground();
+      } else {
+        const imgRatio = img.width / img.height;
+        const canvasRatio = width / calcHeight;
+        let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
+
+        if (imgRatio > canvasRatio) {
+          drawHeight = calcHeight;
+          drawWidth = img.width * (calcHeight / img.height);
+          offsetX = (width - drawWidth) / 2;
+        } else {
+          drawWidth = width;
+          drawHeight = img.height * (width / img.width);
+          offsetY = (calcHeight - drawHeight) / 2;
+        }
         ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
       }
+    }
 
     let filterEffects = [];
     if (settings.bgBlur > 0) filterEffects.push(`blur(${settings.bgBlur}px)`);
@@ -2058,12 +2166,7 @@ function generateTextImage(chunk, index) {
     .text("Download")
     .on("click", () => saveImage(canvas.toDataURL("image/png"), `${index + 1}.png`));
 
-  const bgImage = settings.selectedBackgroundImage;
-  const useBgColor = settings.useBackgroundColor;
-  const bgColor = settings.backgroundColor;
-  const useSecondBgColor = settings.useSecondBackgroundColor;
-  const secondBgColor = settings.secondBackgroundColor;
-  if (useBgColor) {
+  if (useBgColor && !bgImage) {
     if (useSecondBgColor) {
       const gradient = ctx.createLinearGradient(0, 0, width, calcHeight);
       gradient.addColorStop(0, bgColor);
@@ -2326,6 +2429,8 @@ jQuery(async () => {
 function bindingFunctions() {
   $("#tti_font_family").on("change", fontFamily);
   $("#tti_font_size").on("change", fontSize);
+  $("#tti_letter_spacing").on("change", fontSpacing);
+  $("#tti_line_height").on("change", fontLineHeight);
   $("#tti_font_align").on("change", fontAlign);
   $("#tti_font_color").on("change", fontColor);
   $("#use_italic_color").on("change", useItalicColor);
@@ -2341,6 +2446,7 @@ function bindingFunctions() {
   $("#tti_stroke_width").on("change", strokeWidth);
   $("#tti_line_break").on("change", lineBreak);
   $("#tti_ratio").on("change", aspectRatio);
+  $("#tti_fill_mode").on("change", bgFillMode);
   $("#text_to_image").on("change", refreshPreview);
   $("#use_background_color").on("change", useBackgroundColor);
   $("#background_color").on("change", backgroundColor);
