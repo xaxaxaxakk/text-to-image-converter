@@ -26,6 +26,8 @@ const defaultSettings = {
   selectedBackgroundImage: `${extensionFolderPath}/default-backgrounds/bg40.png`,
   useBackgroundColor: false,
   backgroundColor: "#ffffff",
+  useSecondBackgroundColor: false,
+  secondBackgroundColor: "#ffffff",
   imageRatio: "square",
   bgBlur: 0,
   bgBrightness: 100,
@@ -66,6 +68,8 @@ async function initSettings() {
     imageRatio,
     useBackgroundColor,
     backgroundColor,
+    useSecondBackgroundColor,
+    secondBackgroundColor,
     bgBlur,
     bgBrightness,
     bgHue,
@@ -100,6 +104,8 @@ async function initSettings() {
   $("#tti_ratio").val(imageRatio);
   $("#use_background_color").prop("checked", useBackgroundColor);
   $("#background_color").val(backgroundColor);
+  $("#use_second_background_color").prop("checked", useSecondBackgroundColor);
+  $("#second_background_color").val(secondBackgroundColor);
   $("#bg_blur").val(bgBlur);
   $("#bg_brightness").val(bgBrightness);
   $("#bg_hue").val(bgHue);
@@ -152,6 +158,8 @@ function getPresetSettings() {
   settings.replacementWord4 = $("#replacement_word_4").val();
   settings.useBackgroundColor = $("#use_background_color").prop("checked");
   settings.backgroundColor = $("#background_color").val();
+  settings.useSecondBackgroundColor = $("#use_second_background_color").prop("checked");
+  settings.secondBackgroundColor = $("#second_background_color").val();
   settings.footerText = $("#footer_text").val();
   settings.footerColor = $("#footer_color").val();
   settings.autoPreview = $("#preview_toggle").prop("checked");
@@ -259,6 +267,8 @@ function deletePreset() {
     $("#replacement_word_4").val("");
     $("#use_background_color").prop("checked", defaultSettings.useBackgroundColor);
     $("#background_color").val(defaultSettings.backgroundColor);
+    $("#use_second_background_color").prop("checked", defaultSettings.useSecondBackgroundColor);
+    $("#second_background_color").val(defaultSettings.secondBackgroundColor);
     $(".bg-image-item").removeClass("selected");
     $(`.bg-image-item[data-path="${defaultSettings.selectedBackgroundImage}"]`).addClass(
       "selected"
@@ -319,6 +329,8 @@ function selectPreset() {
     $("#replacement_word_4").val("");
     $("#use_background_color").prop("checked", defaultSettings.useBackgroundColor);
     $("#background_color").val(defaultSettings.backgroundColor);
+    $("#use_second_background_color").prop("checked", defaultSettings.useSecondBackgroundColor);
+    $("#second_background_color").val(defaultSettings.secondBackgroundColor);
     $(".bg-image-item").removeClass("selected");
     $(`.bg-image-item[data-path="${defaultSettings.selectedBackgroundImage}"]`).addClass(
       "selected"
@@ -458,6 +470,12 @@ function applyPreset(presetName) {
         break;
       case "backgroundColor":
         $("#background_color").val(value);
+        break;
+      case "useSecondBackgroundColor":
+        $("#use_second_background_color").prop("checked", value);
+        break;
+      case "SecondBackgroundColor":
+        $("#second_background_color").val(value);
         break;
       case "footerText":
         $("#footer_text").val(value);
@@ -1078,6 +1096,16 @@ function useBackgroundColor(event) {
 }
 function backgroundColor(event) {
   extension_settings[extensionName].backgroundColor = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
+function useSecondBackgroundColor(event) {
+  extension_settings[extensionName].useSecondBackgroundColor = event.target.checked;
+  saveSettings();
+  refreshPreview();
+}
+function secondBackgroundColor(event) {
+  extension_settings[extensionName].secondBackgroundColor = event.target.value;
   saveSettings();
   refreshPreview();
 }
@@ -2033,8 +2061,17 @@ function generateTextImage(chunk, index) {
   const bgImage = settings.selectedBackgroundImage;
   const useBgColor = settings.useBackgroundColor;
   const bgColor = settings.backgroundColor;
+  const useSecondBgColor = settings.useSecondBackgroundColor;
+  const secondBgColor = settings.secondBackgroundColor;
   if (useBgColor) {
-    ctx.fillStyle = bgColor;
+    if (useSecondBgColor) {
+      const gradient = ctx.createLinearGradient(0, 0, width, calcHeight);
+      gradient.addColorStop(0, bgColor);
+      gradient.addColorStop(1, secondBgColor);
+      ctx.fillStyle = gradient;
+    } else {
+      ctx.fillStyle = bgColor;
+    }
     ctx.fillRect(0, 0, width, calcHeight);
     drawOverlay();
     drawText();
@@ -2306,6 +2343,8 @@ function bindingFunctions() {
   $("#text_to_image").on("change", refreshPreview);
   $("#use_background_color").on("change", useBackgroundColor);
   $("#background_color").on("change", backgroundColor);
+  $("#use_second_background_color").on("change", useSecondBackgroundColor);
+  $("#second_background_color").on("change", secondBackgroundColor);
   $("#bg_blur").on("change", addBlur);
   $("#bg_brightness").on("change", brightness);
   $("#bg_hue").on("change", hue);

@@ -454,7 +454,8 @@
   & #background {
     container: gallery-grid / inline-size;
   }
-  & #background_color {
+  & #background_color,
+  & #second_background_color {
     width: calc(100% - 50px) !important;
   }
 
