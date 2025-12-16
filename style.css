@@ -217,7 +217,7 @@
       content: "\f2ed";
     }
   }
-  & .bot-datas .botSaver:disabled {
+  & .bot-datas .bot-data:disabled {
     background: rgba(0, 0, 0, 0.07) !important;
     cursor: default !important;
   }
