@@ -205,7 +205,7 @@
 
     &::before {
       content: "\f07c";
-      font-family: "Font Awesome 7 Free";
+      font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "Font Awesome 5 Free", "Font Awesome 5 Pro", FontAwesome !important;
       font-weight: bold;
     }
   }
