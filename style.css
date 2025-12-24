@@ -665,7 +665,7 @@
   }
   & :where(#preview_toggle, #letter_control, #unit_control) + label::before {
     margin-right: 3px;
-    font-family: "Font Awesome 7 Free";
+    font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "Font Awesome 5 Free", "Font Awesome 5 Pro", FontAwesome !important;
     font-size: 12px;
     content: "\f204";
   }
@@ -674,8 +674,6 @@
   }
   & :where(#preview_toggle, #letter_control, #unit_control):checked + label::before {
     color: #a29bfe;
-    font-family: "Font Awesome 7 Free";
-    font-size: 12px;
     content: "\f205";
   }
   .refresh-preview {
