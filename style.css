@@ -625,7 +625,7 @@
         padding: 2px !important;
       }
     }
-    
+
     & .tag-name {
       width: 120px !important;
       height: 30px !important;
@@ -822,7 +822,11 @@
 @font-face {
   font-family: "MaruBuriSemiBold";
   src: url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.eot);
-  src: url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.eot?#iefix) format("embedded-opentype"), url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff2) format("woff2"), url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff) format("woff"), url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.ttf) format("truetype");
+  src:
+    url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.eot?#iefix) format("embedded-opentype"),
+    url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff2) format("woff2"),
+    url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff) format("woff"),
+    url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.ttf) format("truetype");
 }
 @font-face {
   font-family: "SunBatang-Light";
@@ -859,14 +863,21 @@
   font-weight: 400;
   font-style: normal;
   src: url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.eot);
-  src: url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.eot?#iefix) format("embedded-opentype"), url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.woff) format("woff"), url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.ttf) format("truetype");
+  src:
+    url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.eot?#iefix) format("embedded-opentype"),
+    url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.woff) format("woff"),
+    url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.ttf) format("truetype");
 }
 @font-face {
   font-family: "Jeju Myeongjo";
   font-weight: 400;
   font-style: normal;
   src: url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.eot);
-  src: url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.eot?#iefix) format("embedded-opentype"), url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.woff2) format("woff2"), url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.woff) format("woff"), url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.ttf) format("truetype");
+  src:
+    url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.eot?#iefix) format("embedded-opentype"),
+    url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.woff2) format("woff2"),
+    url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.woff) format("woff"),
+    url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.ttf) format("truetype");
 }
 @font-face {
   font-family: "Father_loveletter";
@@ -1033,5 +1044,59 @@
   font-family: "MissedGyuwon";
   src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2510-1@1.0/Griun_Gyuwon-Rg.woff2") format("woff2");
   font-weight: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Umdot";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-4@1.1/Umdot12.woff2") format("woff2");
+  font-weight: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "BelovedMyoeunttobak";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-1@1.0/Griun_Myoeunddobak-Rg.woff2") format("woff2");
+  font-weight: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "NostalgicMongtori";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-1@1.0/Griun_Mongtori-Rg.woff2") format("woff2");
+  font-weight: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "NostalgicGellyRoll";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-1@1.0/Griun_Gellyroll-Rg.woff2") format("woff2");
+  font-weight: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SchoolSafetyCertificate";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2510-1@1.0/HakgyoansimSangjangR.woff2") format("woff2");
+  font-weight: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "GyeongbokgungSumunjangBodyText";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2511-3@1.0/Sumunjang_BodyB.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "GMarketSans-L";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansLight.woff") format("woff");
+  font-weight: 300;
+  font-display: swap;
+}
+@font-face {
+  font-family: "GMarketSans-M";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff") format("woff");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "GMarketSans-B";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff") format("woff");
+  font-weight: 700;
   font-display: swap;
 }

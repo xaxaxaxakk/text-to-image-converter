@@ -174,5 +174,41 @@
   {
     "label": "그리운 규원체",
     "value": "MissedGyuwon"
+  },
+  {
+    "label": "움돋",
+    "value": "Umdot"
+  },
+  {
+    "label": "그리운 묘은또박체",
+    "value": "BelovedMyoeunttobak"
+  },
+  {
+    "label": "그리운 몽토리체",
+    "value": "NostalgicMongtori"
+  },
+  {
+    "label": "그리운 겔리롤",
+    "value": "NostalgicGellyRoll"
+  },
+  {
+    "label": "학교안심 상장",
+    "value": "SchoolSafetyCertificate"
+  },
+  {
+    "label": "경복궁 수문장 본문체",
+    "value": "GyeongbokgungSumunjangBodyText"
+  },
+  {
+    "label": "G마켓 산스 L",
+    "value": "GMarketSans-L"
+  },
+  {
+    "label": "G마켓 산스 M",
+    "value": "GMarketSans-M"
+  },
+  {
+    "label": "G마켓 산스 B",
+    "value": "GMarketSans-B"
   }
 ]
