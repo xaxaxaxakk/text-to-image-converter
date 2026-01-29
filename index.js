@@ -1650,6 +1650,12 @@ function highlighterTags() {
               <option value="useGlobal" ${(!tag.fontFamily || tag.fontFamily === "useGlobal") ? "selected" : ""}>전역 폰트 사용</option>
             </select>
             <input type="number" class="tag-font-size" value="${tag.fontSize}" min="12" max="50" />
+            <select class="tag-stroke-width">
+              <option value="inherit" ${(!tag.strokeWidth || tag.strokeWidth === "inherit") ? "selected" : ""}>전역</option>
+              <option value="0" ${tag.strokeWidth === "0" ? "selected" : ""}>기본</option>
+              <option value="0.8" ${tag.strokeWidth === "0.8" ? "selected" : ""}>세미 볼드</option>
+              <option value="1.5" ${tag.strokeWidth === "1.5" ? "selected" : ""}>볼드</option>
+            </select>
           </div>
           <div>
             <div class="font-color-container">
@@ -1697,6 +1703,7 @@ function addHighlightTag() {
     fontColor: "#000000",
     bgColor: "#ffffff",
     fontSize: 24,
+    strokeWidth: "inherit",
     useTagFontColor: false,
     useTagBgColor: false,
   });
@@ -1762,6 +1769,7 @@ function enableMarkdown(text) {
                 bgColor: tagSet.useTagBgColor ? tagSet.bgColor : (innerContent.bgColor || null),
                 fontFamily: tagSet.fontFamily || null,
                 fontSize: tagSet.fontSize,
+                strokeWidth: tagSet.strokeWidth || null, 
               });
             }
           });
@@ -1898,6 +1906,7 @@ function wrappingTexts(text, mode = "word") {
             bgColor: span.bgColor,
             fontFamily: span.fontFamily,
             fontSize: span.fontSize,
+            strokeWidth: span.strokeWidth,
           });
         } else {
           if (currentLine.length) {
@@ -1921,6 +1930,7 @@ function wrappingTexts(text, mode = "word") {
             bgColor: span.bgColor,
             fontFamily: span.fontFamily,
             fontSize: span.fontSize,
+            strokeWidth: span.strokeWidth,
           }];
         }
       });
@@ -2036,6 +2046,15 @@ function generateTextImage(chunk, index) {
       const setFontSize = span.fontSize || fontSize;
       const textHeight = setFontSize;
 
+      let currentStrokeWidth = strokeWidth;
+      if (span.strokeWidth !== undefined && span.strokeWidth !== null) {
+        if (span.strokeWidth === "inherit") {
+          currentStrokeWidth = parseFloat(settings.strokeWidth) || 0;
+        } else {
+          currentStrokeWidth = parseFloat(span.strokeWidth) || 0;
+        }
+      }
+
       let textColor = settings.fontColor || "#000000";
       if (span.fontColor) {
         textColor = span.fontColor;
@@ -2064,9 +2083,9 @@ function generateTextImage(chunk, index) {
 
       if (drawMode === "both" || drawMode === "text") {
         ctx.fillStyle = textColor;
-        if (strokeWidth > 0) {
+        if (currentStrokeWidth > 0) {
           ctx.strokeStyle = textColor;
-          ctx.lineWidth = strokeWidth;
+          ctx.lineWidth = currentStrokeWidth;
           ctx.strokeText(span.text, x, y);
         }
         ctx.fillText(span.text, x, y);
@@ -2722,7 +2741,10 @@ function highlighterOption() {
     updateHighlightTag(index, "fontFamily", $(this).val());
     refreshPreview();
   });
-
+  $(document).on("change", ".tag-stroke-width", function() {
+    const index = $(this).closest(".tag-item").data("index");
+    updateHighlightTag(index, "strokeWidth", $(this).val());
+  });
   $(document).on("change", ".use-tag-font-color", function() {
     const index = $(this).closest(".tag-item").data("index");
     const checked = $(this).prop("checked");
