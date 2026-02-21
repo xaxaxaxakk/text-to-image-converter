@@ -15,7 +15,7 @@
   textarea,
   input,
   textarea:not(#send_textarea),
-  span:not([class*="fa"]):not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.fass):not(.fasr):not(.fasl):not(.fasd),
+  span:not([class*="fa"]):not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.fass):not(.fasr):not(.fasl):not(.fasd):not([style]),
   select {
     color: #2c3e50 !important;
     font-family: "Pretendard-Regular" !important;
@@ -86,6 +86,12 @@
     border: 1px solid rgba(255, 255, 255, 0.5) !important;
     border-radius: 15px;
     background: rgba(255, 255, 255, 0.4);
+  }
+  & .html-mode-hidden {
+    display: none !important;
+  }
+  & .html-mode-only {
+    display: none !important;
   }
   & h4 {
     display: flex;
@@ -660,19 +666,19 @@
       cursor: pointer;
     }
   }
-  & :where(#preview_toggle, #letter_control, #unit_control) + label {
+  & :where(#preview_toggle, #html_toggle, #letter_control, #unit_control) + label {
     opacity: 0.5;
   }
-  & :where(#preview_toggle, #letter_control, #unit_control) + label::before {
+  & :where(#preview_toggle, #html_toggle, #letter_control, #unit_control) + label::before {
     margin-right: 3px;
     font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "Font Awesome 5 Free", "Font Awesome 5 Pro", FontAwesome !important;
     font-size: 12px;
     content: "\f204";
   }
-  & :where(#preview_toggle, #letter_control, #unit_control):checked + label {
+  & :where(#preview_toggle, #html_toggle, #letter_control, #unit_control):checked + label {
     opacity: 1;
   }
-  & :where(#preview_toggle, #letter_control, #unit_control):checked + label::before {
+  & :where(#preview_toggle, #html_toggle, #letter_control, #unit_control):checked + label::before {
     color: #a29bfe;
     content: "\f205";
   }
@@ -719,6 +725,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
+    width: 100%;
     &:empty {
       display: none;
     }
@@ -735,6 +742,19 @@
   & .image-preview-item img {
     max-width: 100%;
     border-radius: 10px;
+  }
+  & .html-preview-item {
+    width: 100%;
+  }
+  & .html-render-preview {
+    display: block;
+    width: 100%;
+    min-height: 220px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.7) !important;
+    overflow: hidden;
   }
   & .download-btn {
     display: block;
@@ -763,6 +783,23 @@
       height: 35px !important;
     }
   }
+}
+.range-value-tooltip {
+  position: absolute;
+  transform: translateX(-50%);
+  padding: 4px 7px;
+  border-radius: 7px;
+  background: rgba(44, 62, 80, 0.9);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 99999;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.range-value-tooltip.shown {
+  opacity: 1;
 }
 /* 폰트 리스트 */
 @font-face {
