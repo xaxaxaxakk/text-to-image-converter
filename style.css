@@ -278,7 +278,7 @@
   }
   & .html-switcher-input-item textarea {
     width: 100%;
-    min-height: 66px;
+    min-height: 200px !important;
     padding: 8px 10px;
     border: 1px solid rgba(255, 255, 255, 0.5) !important;
     border-radius: 10px;
