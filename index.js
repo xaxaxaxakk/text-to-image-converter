@@ -8,6 +8,7 @@ const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 const defaultSettings = {
   fontFamily: "Pretendard-Regular",
   fontWeight: "normal",
+  htmlFontFace: "Ridibatang",
   fontSize: 24,
   fontSizeImage: 24,
   fontSizeHtml: 14,
@@ -61,15 +62,24 @@ const defaultSettings = {
 };
 let defaultBackgroundUrlMap = new Map();
 let defaultBackgroundBasenameMap = new Map();
-const HTML_FONT_FACE = "Ridibatang";
 const CUSTOM_BG_STORAGE_IMAGE_KEY = "textToImageCustomBgsImage";
 const CUSTOM_BG_STORAGE_HTML_KEY = "textToImageCustomBgsHTML";
+const HTML_FONT_FACE_OPTIONS = new Set(["Ridibatang", "Nanum Gothic"]);
 
 function isHtmlModeEnabled() {
   return !!extension_settings[extensionName]?.htmlMode;
 }
 function getFooterLayoutMode(settings = extension_settings[extensionName]) {
   return settings?.footerLayoutMode === "full" ? "full" : "scroll";
+}
+function normalizeHtmlFontFace(value) {
+  return HTML_FONT_FACE_OPTIONS.has(value) ? value : defaultSettings.htmlFontFace;
+}
+function getHtmlFontFace(settings = extension_settings[extensionName]) {
+  return normalizeHtmlFontFace(settings?.htmlFontFace);
+}
+function getHtmlPreviewFontFamily(settings = extension_settings[extensionName]) {
+  return getHtmlFontFace(settings) === "Nanum Gothic" ? "Pretendard-Regular" : "RIDIBatang";
 }
 function parsePositiveInt(value, fallback) {
   const parsed = parseInt(value, 10);
@@ -191,6 +201,7 @@ async function initSettings() {
     fontFamily,
     fontSizeImage,
     fontSizeHtml,
+    htmlFontFace,
     fontSpacing,
     fontLineHeight,
     fontAlign,
@@ -239,6 +250,7 @@ async function initSettings() {
   $("#tti_font_family").val(fontFamily);
   $("#tti_font_size_image").val(fontSizeImage);
   $("#tti_font_size_html").val(fontSizeHtml);
+  $("#tti_html_font_face").val(normalizeHtmlFontFace(htmlFontFace));
   $("#tti_letter_spacing").val(fontSpacing);
   $("#tti_line_height").val(fontLineHeight);
   $("#tti_font_align").val(fontAlign);
@@ -315,6 +327,7 @@ function getPresetSettings() {
   settings.fontSizeImage = Number.isFinite(imageFontSize) ? imageFontSize : (settings.fontSizeImage || defaultSettings.fontSizeImage);
   settings.fontSizeHtml = Number.isFinite(htmlFontSize) ? htmlFontSize : (settings.fontSizeHtml || defaultSettings.fontSizeHtml);
   settings.fontSize = settings.htmlMode ? settings.fontSizeHtml : settings.fontSizeImage;
+  settings.htmlFontFace = normalizeHtmlFontFace($("#tti_html_font_face").val());
 
   if (currentCustomFont && oriFontFamily) {
     settings.fontFamily = oriFontFamily;
@@ -423,6 +436,7 @@ function deletePreset() {
     $("#tti_font_family").val(defaultSettings.fontFamily);
     $("#tti_font_size_image").val(defaultSettings.fontSizeImage);
     $("#tti_font_size_html").val(defaultSettings.fontSizeHtml);
+    $("#tti_html_font_face").val(defaultSettings.htmlFontFace);
     $("#tti_letter_spacing").val(defaultSettings.fontSpacing);
     $("#tti_line_height").val(defaultSettings.fontLineHeight);
     $("#tti_font_align").val(defaultSettings.fontAlign);
@@ -507,6 +521,7 @@ function selectPreset() {
     $("#tti_font_family").val(defaultSettings.fontFamily);
     $("#tti_font_size_image").val(defaultSettings.fontSizeImage);
     $("#tti_font_size_html").val(defaultSettings.fontSizeHtml);
+    $("#tti_html_font_face").val(defaultSettings.htmlFontFace);
     $("#tti_letter_spacing").val(defaultSettings.fontSpacing);
     $("#tti_line_height").val(defaultSettings.fontLineHeight);
     $("#tti_font_align").val(defaultSettings.fontAlign);
@@ -623,6 +638,10 @@ function applyPreset(presetName) {
     switch (key) {
       case "fontFamily":
         $("#tti_font_family").val(value);
+        break;
+      case "htmlFontFace":
+        extension_settings[extensionName].htmlFontFace = normalizeHtmlFontFace(value);
+        $("#tti_html_font_face").val(extension_settings[extensionName].htmlFontFace);
         break;
       case "fontSpacing":
         $("#tti_letter_spacing").val(value);
@@ -771,6 +790,10 @@ function applyPreset(presetName) {
   if (!Object.prototype.hasOwnProperty.call(preset, "blockquoteBorderColor")) {
     extension_settings[extensionName].blockquoteBorderColor = defaultSettings.blockquoteBorderColor;
     $("#tti_blockquote_border_color").val(defaultSettings.blockquoteBorderColor);
+  }
+  if (!Object.prototype.hasOwnProperty.call(preset, "htmlFontFace")) {
+    extension_settings[extensionName].htmlFontFace = defaultSettings.htmlFontFace;
+    $("#tti_html_font_face").val(defaultSettings.htmlFontFace);
   }
 
   const presetImageFontSize = parseInt(preset.fontSizeImage, 10);
@@ -1774,6 +1797,11 @@ function fontSizeHtml(event) {
   if (isHtmlModeEnabled()) {
     extension_settings[extensionName].fontSize = value;
   }
+  saveSettings();
+  refreshPreview();
+}
+function htmlFontFace(event) {
+  extension_settings[extensionName].htmlFontFace = normalizeHtmlFontFace(event.target.value);
   saveSettings();
   refreshPreview();
 }
@@ -2935,12 +2963,13 @@ function buildSpanStyle(span, settings) {
 }
 function renderMarkdownHTML(text, settings) {
   const lines = String(text || "").split(/\n/);
+  const htmlFontFace = getHtmlFontFace(settings);
   const renderLineHTML = (lineText, isBlockquoteLine = false) => {
     let spans = enableMarkdown(lineText);
     if (isBlockquoteLine) {
       spans = spans.map((span) => ({...span, isBlockquote: true}));
     }
-    if (!spans.length) return `<font face="${HTML_FONT_FACE}"></font>`;
+    if (!spans.length) return `<font face="${htmlFontFace}"></font>`;
 
     const lineHtml = spans.map((span) => {
       const spanText = escapeHTML(span.text || "");
@@ -2948,7 +2977,7 @@ function renderMarkdownHTML(text, settings) {
       if (!spanStyle) return spanText;
       return `<span style="${spanStyle}">${spanText}</span>`;
     }).join("");
-    return `<font face="${HTML_FONT_FACE}">${lineHtml}</font>`;
+    return `<font face="${htmlFontFace}">${lineHtml}</font>`;
   };
 
   const htmlLines = [];
@@ -3095,10 +3124,11 @@ function createHTMLSnippet(text, index) {
   const footerTokens = rawFooterText
     ? rawFooterText.split(",").map((token) => token.trim()).filter(Boolean)
     : [];
+  const htmlFontFace = getHtmlFontFace(settings);
   const footerItemsHTML = footerTokens.length
-    ? footerTokens.map((token) => `<span style="${footerItemStyle}"><font face="${HTML_FONT_FACE}">${escapeHTML(token)}</font></span>`).join("")
+    ? footerTokens.map((token) => `<span style="${footerItemStyle}"><font face="${htmlFontFace}">${escapeHTML(token)}</font></span>`).join("")
     : (rawFooterText
-      ? `<span style="${footerItemStyle}"><font face="${HTML_FONT_FACE}">${escapeHTML(rawFooterText)}</font></span>`
+      ? `<span style="${footerItemStyle}"><font face="${htmlFontFace}">${escapeHTML(rawFooterText)}</font></span>`
       : "");
   const footerHTML = hasFooter
     ? `
@@ -3124,7 +3154,8 @@ ${backgroundHTML}${overlayHTML}
 }
 function generateHTMLPreview(text, index) {
   const htmlCode = createHTMLSnippet(text, index);
-  const previewOnlyStyle = `<style>.html-render-preview .tti-content,.html-render-preview .tti-content span[style],.html-render-preview .tti-footer,.html-render-preview .tti-footer *{font-family:RIDIBatang !important;}</style>`;
+  const previewFontFamily = getHtmlPreviewFontFamily();
+  const previewOnlyStyle = `<style>.html-render-preview .tti-content,.html-render-preview .tti-content span[style],.html-render-preview .tti-footer,.html-render-preview .tti-footer *{font-family:${previewFontFamily} !important;}</style>`;
 
   const $preview = $("<div>").addClass("image-preview-item html-preview-item");
   const $rendered = $("<div>")
@@ -3381,6 +3412,7 @@ function bindingFunctions() {
   $("#tti_font_family").on("change", fontFamily);
   $("#tti_font_size_image").on("change", fontSizeImage);
   $("#tti_font_size_html").on("change", fontSizeHtml);
+  $("#tti_html_font_face").on("change", htmlFontFace);
   $("#tti_letter_spacing").on("change", fontSpacing);
   $("#tti_line_height").on("change", fontLineHeight);
   $("#tti_font_align").on("change", fontAlign);
