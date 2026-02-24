@@ -3128,7 +3128,7 @@ function createHTMLSnippet(text, index) {
   const hasFooter = rawFooterText.length > 0;
   const isScrollFooterLayout = footerLayoutMode === "scroll";
   const contentMaxHeightValue = isScrollFooterLayout
-    ? (hasFooter ? `calc(${footerHeightPx}px - 100px)` : `${footerHeightPx}px`)
+    ? (hasFooter ? `calc(${footerHeightPx}px - 100px)` : `calc(${footerHeightPx}px - 64px)`)
     : "none";
   const containerInlineStyle = [
     "background:transparent !important",
