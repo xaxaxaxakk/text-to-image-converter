@@ -3415,7 +3415,6 @@ function setupImageConvertButton() {
   let menuOpened = false;
   let lastSelectionPoint = {x: 0, y: 0};
   let selectionPositionFrame = null;
-  let suppressFloatUntilNextSelection = false;
 
   function buildCombinedSelectedText() {
     if (rememberedSelections.length && liveSelectedText) {
@@ -3485,7 +3484,6 @@ function setupImageConvertButton() {
             liveSelectedText = "";
             syncSelectedTextState();
             startClearSelectionTimer();
-            suppressFloatUntilNextSelection = true;
             window.getSelection().removeAllRanges();
             hideSelectionFloat();
           }),
@@ -3515,7 +3513,7 @@ function setupImageConvertButton() {
       $("<button>")
         .addClass("tti-selection-action")
         .attr("type", "button")
-        .text("이미지로 저장")
+        .text("이미지 발췌")
         .on("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -3524,7 +3522,7 @@ function setupImageConvertButton() {
       $("<button>")
         .addClass("tti-selection-action")
         .attr("type", "button")
-        .text("코드로 저장")
+        .text("코드 발췌")
         .on("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -3533,7 +3531,7 @@ function setupImageConvertButton() {
       $("<button>")
         .addClass("tti-selection-action")
         .attr("type", "button")
-        .text("즉시 저장")
+        .text("즉시 발췌")
         .on("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -3740,7 +3738,6 @@ function setupImageConvertButton() {
       const selectedString = selection.toString().trim();
 
       if (selectedString) {
-        suppressFloatUntilNextSelection = false;
         const $mes = getSelectionMesBlock(selection);
         if (!$mes.length) {
           if (selectedText || hasRememberedSelection()) {
@@ -3757,13 +3754,8 @@ function setupImageConvertButton() {
       } else {
         liveSelectedText = "";
         syncSelectedTextState();
-        if (hasRememberedSelection()) {
-          if (suppressFloatUntilNextSelection) return;
-          if (!$selectionFloat || !$selectionFloat.hasClass("is-visible")) {
-            showSelectionFloatAt(lastSelectionPoint.x, lastSelectionPoint.y);
-          }
+        if (hasRememberedSelection() || selectedText) {
           startClearSelectionTimer();
-          return;
         }
         hideSelectionFloat();
       }
@@ -3783,9 +3775,6 @@ function setupImageConvertButton() {
   $(document).on("mousedown touchstart", function (e) {
     if (!$selectionFloat || !$selectionFloat.hasClass("is-visible")) return;
     if ($(e.target).closest(".tti-selection-float").length) return;
-    const selection = window.getSelection();
-    if (selection && selection.toString().trim()) return;
-    if (hasRememberedSelection()) return;
     liveSelectedText = "";
     selectedText = "";
     selectedMesBlock = null;
