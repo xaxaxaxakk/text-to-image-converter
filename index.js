@@ -133,6 +133,7 @@ function syncSelectedBackgroundUI() {
   }
 }
 let rangeValueTooltip = null;
+let isImageConvertButtonSetup = false;
 function ensureRangeValueTooltip() {
   if (rangeValueTooltip && document.body.contains(rangeValueTooltip)) {
     return rangeValueTooltip;
@@ -3401,40 +3402,400 @@ async function copyToClipboard(content) {
 
 // 추가 다운로드 버튼
 function setupImageConvertButton() {
+  if (isImageConvertButtonSetup) return;
+  isImageConvertButtonSetup = true;
+
   let selectedText = "";
+  let liveSelectedText = "";
+  let rememberedSelections = [];
   let selectedMesBlock = null;
   let timeout;
   let clearSelectionTimeout;
+  let $selectionFloat = null;
+  let menuOpened = false;
+  let lastSelectionPoint = {x: 0, y: 0};
+  let selectionPositionFrame = null;
+  let suppressFloatUntilNextSelection = false;
+
+  function buildCombinedSelectedText() {
+    if (rememberedSelections.length && liveSelectedText) {
+      return `${rememberedSelections.join("\n\n")}\n\n${liveSelectedText}`;
+    }
+    if (rememberedSelections.length) {
+      return rememberedSelections.join("\n\n");
+    }
+    return liveSelectedText;
+  }
+
+  function syncSelectedTextState() {
+    selectedText = buildCombinedSelectedText();
+  }
+
+  function hasRememberedSelection() {
+    return rememberedSelections.length > 0;
+  }
+  function getSelectionMesBlock(selection) {
+    const anchorNode = selection?.anchorNode;
+    if (!anchorNode) return $();
+    return $(anchorNode).closest("#chat .mes");
+  }
+  function isSelectionInsideChat(selection) {
+    return getSelectionMesBlock(selection).length > 0;
+  }
 
   function allClearSelection() {
     clearTimeout(clearSelectionTimeout);
     selectedText = "";
+    liveSelectedText = "";
+    rememberedSelections = [];
     selectedMesBlock = null;
+    hideSelectionFloat();
   }
 
   function startClearSelectionTimer() {
     clearTimeout(clearSelectionTimeout);
     clearSelectionTimeout = setTimeout(() => {
+      const selection = window.getSelection();
+      if (selection && selection.toString().trim() && isSelectionInsideChat(selection)) {
+        startClearSelectionTimer();
+        return;
+      }
       allClearSelection();
-    }, 15000);
+    }, 20000);
   }
 
-  $(document).on("selectionchange", function () {
+  function ensureSelectionFloat() {
+    if ($selectionFloat) return;
+
+    $selectionFloat = $("<div>")
+      .addClass("tti-selection-float")
+      .append(
+        $("<button>")
+          .addClass("tti-selection-append fa-solid fa-forward")
+          .attr({
+            type: "button",
+            title: "이어서 선택",
+            "data-i18n": "[title]이어서 선택",
+          })
+          .on("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!liveSelectedText) return;
+            rememberedSelections.push(liveSelectedText);
+            liveSelectedText = "";
+            syncSelectedTextState();
+            startClearSelectionTimer();
+            suppressFloatUntilNextSelection = true;
+            window.getSelection().removeAllRanges();
+            hideSelectionFloat();
+          }),
+        $("<button>")
+          .addClass("tti-selection-toggle fa-solid fa-camera-retro")
+          .attr({
+            type: "button",
+            title: "발췌하기",
+            "data-i18n": "[title]발췌하기",
+          })
+          .on("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!selectedText) return;
+            menuOpened ? closeSelectionMenu() : openSelectionMenu();
+          }),
+        $("<div>").addClass("tti-selection-menu")
+      );
+
+    $("body").append($selectionFloat);
+  }
+
+  function renderMainMenu() {
+    ensureSelectionFloat();
+    const $menu = $selectionFloat.find(".tti-selection-menu").empty();
+    $menu.append(
+      $("<button>")
+        .addClass("tti-selection-action")
+        .attr("type", "button")
+        .text("이미지로 저장")
+        .on("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          renderPresetMenu(false, "이미지 프리셋");
+        }),
+      $("<button>")
+        .addClass("tti-selection-action")
+        .attr("type", "button")
+        .text("코드로 저장")
+        .on("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          renderPresetMenu(true, "코드 프리셋");
+        }),
+      $("<button>")
+        .addClass("tti-selection-action")
+        .attr("type", "button")
+        .text("즉시 저장")
+        .on("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const currentPreset = $("#preset_selector").val();
+          if (!currentPreset || currentPreset === "nonePreset") {
+            toastr.warning("선택된 프리셋이 없습니다.");
+            return;
+          }
+          if (!selectedText) return;
+          closeSelectionMenu();
+          setExtractText(selectedText);
+          allClearSelection();
+          window.getSelection().removeAllRanges();
+        })
+    );
+  }
+
+  function openSelectionMenu() {
+    ensureSelectionFloat();
+    renderMainMenu();
+    menuOpened = true;
+    $selectionFloat.addClass("menu-open");
+    keepSelectionFloatInViewport();
+    requestAnimationFrame(() => {
+      keepSelectionFloatInViewport();
+    });
+    setTimeout(() => {
+      keepSelectionFloatInViewport();
+    }, 0);
+  }
+
+  function closeSelectionMenu() {
+    if (!$selectionFloat) return;
+    menuOpened = false;
+    $selectionFloat.removeClass("menu-open");
+    $selectionFloat.find(".tti-selection-menu").empty();
+    keepSelectionFloatInViewport();
+  }
+
+  function hideSelectionFloat() {
+    if (!$selectionFloat) return;
+    closeSelectionMenu();
+    $selectionFloat.removeClass("is-visible");
+  }
+
+  function showSelectionFloatAt(x, y, position = "default") {
+    ensureSelectionFloat();
+    let nextLeft = x;
+    let nextTop = y;
+
+    if (position === "bottom-center") {
+      const floatRect = $selectionFloat[0].getBoundingClientRect();
+      nextLeft = x - floatRect.width / 2;
+      nextTop = y + 16;
+    }
+
+    lastSelectionPoint = {x: nextLeft, y: nextTop};
+    $selectionFloat.css({left: `${nextLeft}px`, top: `${nextTop}px`}).addClass("is-visible");
+    keepSelectionFloatInViewport();
+  }
+
+  function getSelectionBoundingRect(selection) {
+    if (!selection || !selection.rangeCount) return null;
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    if (!rect || (!rect.width && !rect.height)) return null;
+    return rect;
+  }
+
+  function showSelectionFloatAtSelectionBottomCenter(selection) {
+    const selectionRect = getSelectionBoundingRect(selection);
+    if (!selectionRect) return;
+    showSelectionFloatAt(selectionRect.left + selectionRect.width / 2, selectionRect.bottom, "bottom-center");
+  }
+
+  function updateSelectionFloatPositionFromSelection() {
+    if (!liveSelectedText) return;
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+    const selectedString = selection.toString().trim();
+    if (!selectedString) return;
+    showSelectionFloatAtSelectionBottomCenter(selection);
+  }
+
+  function scheduleSelectionFloatPositionUpdate() {
+    if ((!$selectionFloat || !$selectionFloat.hasClass("is-visible")) && !liveSelectedText) {
+      return;
+    }
+    if (selectionPositionFrame !== null) return;
+    selectionPositionFrame = requestAnimationFrame(() => {
+      selectionPositionFrame = null;
+      updateSelectionFloatPositionFromSelection();
+      keepSelectionFloatInViewport();
+    });
+  }
+
+  function keepSelectionFloatInViewport() {
+    if (!$selectionFloat || !$selectionFloat.hasClass("is-visible")) return;
+
+    const margin = 10;
+    const element = $selectionFloat[0];
+    const rect = element.getBoundingClientRect();
+    let left = parseFloat($selectionFloat.css("left")) || lastSelectionPoint.x;
+    let top = parseFloat($selectionFloat.css("top")) || lastSelectionPoint.y;
+
+    if (rect.right > window.innerWidth - margin) {
+      left -= rect.right - (window.innerWidth - margin);
+    }
+    if (rect.left < margin) {
+      left += margin - rect.left;
+    }
+    if (rect.bottom > window.innerHeight - margin) {
+      top -= rect.bottom - (window.innerHeight - margin);
+    }
+    if (rect.top < margin) {
+      top += margin - rect.top;
+    }
+
+    $selectionFloat.css({left: `${Math.round(left)}px`, top: `${Math.round(top)}px`});
+  }
+
+  function getPresetNamesByMode(isHtmlMode) {
+    const presets = extension_settings[extensionName].presets || {};
+    return Object.keys(presets)
+      .filter((name) => !!presets[name]?.htmlMode === isHtmlMode)
+      .sort();
+  }
+
+  function applyPresetFromMenu(presetName) {
+    const $selector = $("#preset_selector");
+    $selector.val(presetName).trigger("change");
+  }
+
+  function restorePresetAfterSelection(originalPresetName) {
+    const fallbackPreset = originalPresetName || "nonePreset";
+    const $selector = $("#preset_selector");
+    if ($selector.val() === fallbackPreset) return;
+    $selector.val(fallbackPreset).trigger("change");
+  }
+
+  function renderPresetMenu(isHtmlMode, title) {
+    ensureSelectionFloat();
+    const presetNames = getPresetNamesByMode(isHtmlMode);
+    const $menu = $selectionFloat.find(".tti-selection-menu").empty();
+
+    const $header = $("<div>")
+      .addClass("tti-selection-submenu-header")
+      .append(
+        $("<span>").text(title),
+        $("<button>")
+          .attr("type", "button")
+          .text("뒤로")
+          .on("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            renderMainMenu();
+            keepSelectionFloatInViewport();
+          })
+      );
+
+    $menu.append($header);
+
+    if (presetNames.length === 0) {
+      $menu.append($("<div>").addClass("tti-selection-empty").text("사용 가능한 프리셋이 없습니다."));
+      keepSelectionFloatInViewport();
+      return;
+    }
+
+    presetNames.forEach((presetName) => {
+      $menu.append(
+        $("<button>")
+          .addClass("tti-selection-preset")
+          .attr("type", "button")
+          .text(presetName)
+          .on("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!selectedText) return;
+            const originalPresetName = $("#preset_selector").val() || "nonePreset";
+            const shouldRestorePreset = originalPresetName !== presetName;
+            applyPresetFromMenu(presetName);
+            closeSelectionMenu();
+            setExtractText(selectedText, {
+              onComplete: () => {
+                if (shouldRestorePreset) {
+                  restorePresetAfterSelection(originalPresetName);
+                }
+              },
+            });
+            allClearSelection();
+            window.getSelection().removeAllRanges();
+          })
+      );
+    });
+
+    keepSelectionFloatInViewport();
+  }
+
+  function handleSelectionChange() {
     clearTimeout(timeout);
     timeout = setTimeout(() => {
       const selection = window.getSelection();
+      if (!selection) return;
       const selectedString = selection.toString().trim();
 
       if (selectedString) {
-        selectedText = selectedString;
-        selectedMesBlock = $(selection.anchorNode).closest(".mes");
+        suppressFloatUntilNextSelection = false;
+        const $mes = getSelectionMesBlock(selection);
+        if (!$mes.length) {
+          if (selectedText || hasRememberedSelection()) {
+            startClearSelectionTimer();
+          }
+          return;
+        }
+
+        liveSelectedText = selectedString;
+        syncSelectedTextState();
+        selectedMesBlock = $mes;
+        showSelectionFloatAtSelectionBottomCenter(selection);
         startClearSelectionTimer();
+      } else {
+        liveSelectedText = "";
+        syncSelectedTextState();
+        if (hasRememberedSelection()) {
+          if (suppressFloatUntilNextSelection) return;
+          if (!$selectionFloat || !$selectionFloat.hasClass("is-visible")) {
+            showSelectionFloatAt(lastSelectionPoint.x, lastSelectionPoint.y);
+          }
+          startClearSelectionTimer();
+          return;
+        }
+        hideSelectionFloat();
       }
-    }, 100);
+    }, 20);
+  }
+
+  $(document).on("selectionchange", function () {
+    handleSelectionChange();
+  });
+  $(document).on("touchend pointerup", function () {
+    handleSelectionChange();
+    scheduleSelectionFloatPositionUpdate();
   });
   $(document).on("click", "#image_preview_container .download-btn", function () {
     allClearSelection();
   });
+  $(document).on("mousedown touchstart", function (e) {
+    if (!$selectionFloat || !$selectionFloat.hasClass("is-visible")) return;
+    if ($(e.target).closest(".tti-selection-float").length) return;
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim()) return;
+    if (hasRememberedSelection()) return;
+    liveSelectedText = "";
+    selectedText = "";
+    selectedMesBlock = null;
+    hideSelectionFloat();
+  });
+  $(window).on("resize", scheduleSelectionFloatPositionUpdate);
+  window.addEventListener("scroll", scheduleSelectionFloatPositionUpdate, true);
+  window.addEventListener("wheel", scheduleSelectionFloatPositionUpdate, {passive: true});
+  window.addEventListener("touchmove", scheduleSelectionFloatPositionUpdate, {passive: true});
+
   function createImageConvertButton($mesBlock) {
     const $button = $("<div>")
       .addClass("mes_button mes_to_image fa-solid fa-camera-retro interactable")
@@ -3473,7 +3834,8 @@ function setupImageConvertButton() {
   });
   observer.observe($("#chat")[0], {childList: true, subtree: true});
 }
-function setExtractText(text) {
+function setExtractText(text, options = {}) {
+  const onComplete = typeof options.onComplete === "function" ? options.onComplete : null;
   $("#text_to_image").val(text);
 
   if (currentCustomFont) {
@@ -3505,11 +3867,18 @@ function setExtractText(text) {
   refreshPreview();
   if (isHtmlModeEnabled()) {
     const htmlCode = createHTMLSnippet($("#text_to_image").val() || "", 0);
-    copyToClipboard(htmlCode);
+    Promise.resolve(copyToClipboard(htmlCode)).finally(() => {
+      if (onComplete) onComplete();
+    });
     toastr.success("코드 복사 완료!");
     return;
   }
   autoDownload("#image_preview_container .download-btn", 1500);
+  if (onComplete) {
+    setTimeout(() => {
+      onComplete();
+    }, 2600);
+  }
 }
 
 jQuery(async () => {
