@@ -493,6 +493,7 @@ function deletePreset() {
 
     highlighterTags();
     applyHtmlModeUIState();
+    loadCustomBG();
     updateFooterLayoutUIState();
   }
   saveSettings();
@@ -578,6 +579,7 @@ function selectPreset() {
     extension_settings[extensionName].setHighlighterTags = [];
     highlighterTags();
     applyHtmlModeUIState();
+    loadCustomBG();
     updateFooterLayoutUIState();
 
     refreshPreview();
