@@ -15,7 +15,7 @@
   textarea,
   input,
   textarea:not(#send_textarea),
-  span:not([class*="fa"]):not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.fass):not(.fasr):not(.fasl):not(.fasd),
+  span:not([class*="fa"]):not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.fass):not(.fasr):not(.fasl):not(.fasd):not([style]),
   select {
     color: #2c3e50 !important;
     font-family: "Pretendard-Regular" !important;
@@ -87,6 +87,12 @@
     border-radius: 15px;
     background: rgba(255, 255, 255, 0.4);
   }
+  & .html-mode-hidden {
+    display: none !important;
+  }
+  & .html-mode-only {
+    display: none !important;
+  }
   & h4 {
     display: flex;
     align-items: center;
@@ -97,7 +103,8 @@
     gap: 8px;
   }
   & h5 {
-    margin: 15px 0;
+    width: 100% !important;
+    margin: 5px 0 8px 0 !important;
     font-size: 15px !important;
   }
 
@@ -176,8 +183,8 @@
     display: flex;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 10px;
     margin-left: auto;
+    gap: 10px;
   }
   & .bot-datas button {
     flex: 1;
@@ -189,8 +196,8 @@
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.7);
     color: #2c3e50;
-    cursor: pointer;
     font-size: 11px !important;
+    cursor: pointer;
     transition: all 0.3s;
 
     &:not(.botImporter):not(.botSaver:disabled):hover,
@@ -204,9 +211,9 @@
     color: #fff;
 
     &::before {
-      content: "\f07c";
       font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "Font Awesome 5 Free", "Font Awesome 5 Pro", FontAwesome !important;
       font-weight: bold;
+      content: "\f07c";
     }
   }
   & .bot-datas .botImporter.remover {
@@ -231,6 +238,67 @@
     color: #2c3e50 !important;
     font-size: 14px !important;
     resize: vertical;
+  }
+  & .html-switcher-inputs {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.45) !important;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.35) !important;
+  }
+  & .html-switcher-inputs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 8px;
+  }
+  & .html-switcher-inputs-header > span {
+    font-size: 13px !important;
+    font-weight: 600;
+  }
+  & #add_html_switcher_text {
+    height: 28px;
+    min-width: 56px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border-radius: 12px !important;
+    font-size: 12px !important;
+  }
+  & .html-switcher-inputs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  & .html-switcher-input-item {
+    display: grid;
+    align-items: start;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+  }
+  & .html-switcher-input-item textarea {
+    width: 100%;
+    min-height: 140px !important;
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.55) !important;
+    font-size: 14px !important;
+    resize: vertical;
+  }
+  & .html-switcher-remove-btn {
+    width: 25px !important;
+    height: 25px !important;
+  }
+  & .html-switcher-inputs-empty {
+    margin-top: 6px;
+    font-size: 12px !important;
+    text-align: center;
+    opacity: 0.8;
+  }
+  & .html-switcher-inputs.has-items .html-switcher-inputs-empty {
+    display: none;
   }
   & .text-field-buttons {
     display: flex;
@@ -299,7 +367,8 @@
   }
   & .tab-content select,
   & input[type="text"],
-  & input[type="color"] {
+  & input[type="color"],
+  & input[type="number"] {
     width: calc(100% - 70px);
     height: 35px;
     margin: 5px 0;
@@ -343,6 +412,9 @@
     color: #2c3e50;
     font-size: 14px;
   }
+  & .footer-scroll-only-hidden {
+    display: none !important;
+  }
   & div:has(> input[type="checkbox"]):has(> input[type="color"]) {
     display: flex;
     justify-content: space-between;
@@ -371,8 +443,8 @@
     padding: 5px !important;
   }
   & .replacer_box {
-    margin: 0 !important;
     width: 48% !important;
+    margin: 0 !important;
     padding: 12px !important;
     border: none !important;
     border-radius: 10px;
@@ -419,13 +491,32 @@
     width: 100% !important;
     padding-top: 10px !important;
   }
+  & .markdown-color-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 6px;
+    gap: 6px;
+  }
+  & .markdown-color-row-spacer {
+    display: inline-block;
+    flex: 0 0 15px;
+    width: 15px;
+    height: 15px;
+  }
+  & .markdown-color-row > label {
+    width: 80px !important;
+  }
+  & .markdown-color-row > input[type="color"] {
+    width: calc(100% - 115px) !important;
+  }
   & #tti_font_family:disabled {
     background: rgba(0, 0, 0, 0.07) !important;
   }
   & .custom-font-uploader {
     display: flex;
-    width: 100%;
     justify-content: flex-end !important;
+    width: 100%;
     margin-bottom: 20px;
   }
   & .custom-font-uploader .buttons {
@@ -552,8 +643,8 @@
 
   /* 하이라이터 */
   & #custom-highlighter .highlighter-lists {
-    width: 100%;
     display: flex;
+    width: 100%;
     flex-flow: column;
     gap: 20px;
 
@@ -564,8 +655,8 @@
     }
 
     & .delete-tag-btn {
-      height: 28px !important;
       width: 28px !important;
+      height: 28px !important;
       font-size: 12px !important;
     }
 
@@ -591,8 +682,8 @@
     }
     & > div {
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      align-items: center;
       gap: 4px;
 
       &:last-child {
@@ -603,11 +694,11 @@
     & input:not([type="checkbox"], .tag-name),
     & select {
       height: 30px !important;
-      padding: 5px 10px !important;
       margin: 0 !important;
-      text-align: center !important;
-      border-radius: 10px !important;
+      padding: 5px 10px !important;
       border: 1px solid #eee !important;
+      border-radius: 10px !important;
+      text-align: center !important;
     }
     & input[type="checkbox"] {
       margin: 0 5px 0 0 !important;
@@ -629,18 +720,18 @@
     & .tag-name {
       width: 120px !important;
       height: 30px !important;
-      padding: 5px 10px !important;
       margin: 0 !important;
-      text-align: center !important;
-      border-radius: 10px !important;
+      padding: 5px 10px !important;
       border: 2px solid #a29bfe !important;
+      border-radius: 10px !important;
+      text-align: center !important;
     }
   }
 
   & input::-webkit-outer-spin-button,
   & input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
     margin: 0;
+    -webkit-appearance: none;
   }
 
   /* 미리보기 제어 / 치환 옵션 토글 */
@@ -649,10 +740,10 @@
     flex-wrap: wrap;
   }
   & :where(.preview-control, .replace-control) {
-    margin-left: auto;
     display: inline-flex;
-    gap: 10px;
     flex-wrap: wrap;
+    margin-left: auto;
+    gap: 10px;
 
     & label {
       width: auto !important;
@@ -660,19 +751,19 @@
       cursor: pointer;
     }
   }
-  & :where(#preview_toggle, #letter_control, #unit_control) + label {
+  & :where(#preview_toggle, #html_toggle, #letter_control, #unit_control) + label {
     opacity: 0.5;
   }
-  & :where(#preview_toggle, #letter_control, #unit_control) + label::before {
+  & :where(#preview_toggle, #html_toggle, #letter_control, #unit_control) + label::before {
     margin-right: 3px;
     font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "Font Awesome 5 Free", "Font Awesome 5 Pro", FontAwesome !important;
     font-size: 12px;
     content: "\f204";
   }
-  & :where(#preview_toggle, #letter_control, #unit_control):checked + label {
+  & :where(#preview_toggle, #html_toggle, #letter_control, #unit_control):checked + label {
     opacity: 1;
   }
-  & :where(#preview_toggle, #letter_control, #unit_control):checked + label::before {
+  & :where(#preview_toggle, #html_toggle, #letter_control, #unit_control):checked + label::before {
     color: #a29bfe;
     content: "\f205";
   }
@@ -690,8 +781,8 @@
 
     &.shown {
       display: inline-flex;
-      align-items: center;
       justify-content: center;
+      align-items: center;
     }
     &:hover {
       background: rgba(255, 105, 97, 0.7);
@@ -718,6 +809,7 @@
   & .image-preview {
     display: flex;
     flex-wrap: wrap;
+    width: 100%;
     gap: 15px;
     &:empty {
       display: none;
@@ -735,6 +827,19 @@
   & .image-preview-item img {
     max-width: 100%;
     border-radius: 10px;
+  }
+  & .html-preview-item {
+    width: 100%;
+  }
+  & .html-render-preview {
+    display: block;
+    width: 100%;
+    min-height: 220px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.7) !important;
+    overflow: hidden;
   }
   & .download-btn {
     display: block;
@@ -763,6 +868,23 @@
       height: 35px !important;
     }
   }
+}
+.range-value-tooltip {
+  position: absolute;
+  z-index: 99999;
+  padding: 4px 7px;
+  border-radius: 7px;
+  background: rgba(44, 62, 80, 0.9);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.range-value-tooltip.shown {
+  opacity: 1;
 }
 /* 폰트 리스트 */
 @font-face {
@@ -1019,84 +1141,189 @@
 }
 @font-face {
   font-family: "Galmuri9";
-  src: url("https://cdn.jsdelivr.net/gh/quiple/galmuri@main/dist/Galmuri9.woff2") format("woff2");
   font-weight: normal;
+  src: url("https://cdn.jsdelivr.net/gh/quiple/galmuri@main/dist/Galmuri9.woff2") format("woff2");
   font-display: swap;
 }
 @font-face {
   font-family: "Galmuri11";
-  src: url("https://cdn.jsdelivr.net/gh/quiple/galmuri@main/dist/Galmuri11.woff2") format("woff2");
   font-weight: normal;
+  src: url("https://cdn.jsdelivr.net/gh/quiple/galmuri@main/dist/Galmuri11.woff2") format("woff2");
   font-display: swap;
 }
 @font-face {
   font-family: "Galmuri14";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2506-1@1.0/Galmuri14.woff2") format("woff2");
   font-weight: normal;
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2506-1@1.0/Galmuri14.woff2") format("woff2");
 }
 @font-face {
   font-family: "BookkMyungjo-Bd";
-  src: url("https://cdn.jsdelivr.net/gh/fontbee/font@main/Rixfont/BookkMyungjo-Bd.woff2") format("woff2");
   font-weight: 700;
+  src: url("https://cdn.jsdelivr.net/gh/fontbee/font@main/Rixfont/BookkMyungjo-Bd.woff2") format("woff2");
   font-style: normal;
 }
 @font-face {
   font-family: "MissedGyuwon";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2510-1@1.0/Griun_Gyuwon-Rg.woff2") format("woff2");
   font-weight: normal;
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2510-1@1.0/Griun_Gyuwon-Rg.woff2") format("woff2");
   font-display: swap;
 }
 @font-face {
   font-family: "Umdot";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-4@1.1/Umdot12.woff2") format("woff2");
   font-weight: normal;
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-4@1.1/Umdot12.woff2") format("woff2");
   font-display: swap;
 }
 @font-face {
   font-family: "BelovedMyoeunttobak";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-1@1.0/Griun_Myoeunddobak-Rg.woff2") format("woff2");
   font-weight: normal;
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-1@1.0/Griun_Myoeunddobak-Rg.woff2") format("woff2");
   font-display: swap;
 }
 @font-face {
   font-family: "NostalgicMongtori";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-1@1.0/Griun_Mongtori-Rg.woff2") format("woff2");
   font-weight: normal;
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-1@1.0/Griun_Mongtori-Rg.woff2") format("woff2");
   font-display: swap;
 }
 @font-face {
   font-family: "NostalgicGellyRoll";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-1@1.0/Griun_Gellyroll-Rg.woff2") format("woff2");
   font-weight: normal;
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-1@1.0/Griun_Gellyroll-Rg.woff2") format("woff2");
   font-display: swap;
 }
 @font-face {
   font-family: "SchoolSafetyCertificate";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2510-1@1.0/HakgyoansimSangjangR.woff2") format("woff2");
   font-weight: normal;
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2510-1@1.0/HakgyoansimSangjangR.woff2") format("woff2");
   font-display: swap;
 }
 @font-face {
   font-family: "GyeongbokgungSumunjangBodyText";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2511-3@1.0/Sumunjang_BodyB.woff2") format("woff2");
   font-weight: 700;
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2511-3@1.0/Sumunjang_BodyB.woff2") format("woff2");
   font-display: swap;
 }
 @font-face {
   font-family: "GMarketSans-L";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansLight.woff") format("woff");
   font-weight: 300;
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansLight.woff") format("woff");
   font-display: swap;
 }
 @font-face {
   font-family: "GMarketSans-M";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff") format("woff");
   font-weight: 500;
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff") format("woff");
   font-display: swap;
 }
 @font-face {
   font-family: "GMarketSans-B";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff") format("woff");
   font-weight: 700;
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff") format("woff");
   font-display: swap;
+}
+
+.tti-selection-float {
+  display: none;
+  align-items: flex-start;
+  position: fixed;
+  z-index: 5500;
+  gap: 8px;
+}
+
+.tti-selection-float.is-visible {
+  display: flex;
+}
+
+.tti-selection-toggle {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);
+  color: #7d83ad !important;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+}
+
+.tti-selection-append {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);
+  color: #7d83ad !important;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+}
+
+.tti-selection-float .tti-selection-menu {
+  display: none;
+  width: min(240px, calc(100vw - 116px));
+  max-height: min(340px, calc(100vh - 28px));
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);
+  overflow-y: auto;
+}
+
+.tti-selection-float.menu-open .tti-selection-menu {
+  display: block;
+}
+
+.tti-selection-action,
+.tti-selection-preset,
+.tti-selection-submenu-header button {
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.3);
+  color: #363636;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tti-selection-action + .tti-selection-action {
+  margin-top: 6px;
+}
+
+.tti-selection-submenu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  color: #363636;
+  font-size: 12px;
+}
+
+.tti-selection-submenu-header button {
+  width: auto;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.tti-selection-preset + .tti-selection-preset {
+  margin-top: 6px;
+}
+
+.tti-selection-submenu-header + .tti-selection-preset,
+.tti-selection-submenu-header + .tti-selection-empty {
+  margin-top: 4px;
+}
+
+.tti-selection-empty {
+  padding: 8px 2px;
+  color: rgba(54, 54, 54, 0.8);
+  font-size: 12px;
+}
+
+.tti-selection-action:hover,
+.tti-selection-preset:hover,
+.tti-selection-submenu-header button:hover {
+  background: rgba(255, 255, 255, 0.17);
 }

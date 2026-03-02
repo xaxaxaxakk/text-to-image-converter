@@ -8,7 +8,10 @@ const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 const defaultSettings = {
   fontFamily: "Pretendard-Regular",
   fontWeight: "normal",
+  htmlFontFace: "Ridibatang",
   fontSize: 24,
+  fontSizeImage: 24,
+  fontSizeHtml: 14,
   fontSpacing: 0,
   fontLineHeight: 1.5,
   fontAlign: "left",
@@ -23,9 +26,13 @@ const defaultSettings = {
   strikethroughFontColor: "#000000",
   useUnderlineColor: false,
   underlineFontColor: "#000000",
+  blockquoteFontColor: "#000000",
+  blockquoteBgColor: "#ffffff",
+  blockquoteBorderColor: "#000000",
   strokeWidth: "0",
   lineBreak: "byWord",
   selectedBackgroundImage: `${extensionFolderPath}/default-backgrounds/bg40.png`,
+  selectedBackgroundImageHtml: `${extensionFolderPath}/default-backgrounds/bg40.png`,
   useBackgroundColor: false,
   backgroundColor: "#ffffff",
   useSecondBackgroundColor: false,
@@ -42,19 +49,160 @@ const defaultSettings = {
   presets: {},
   currentPreset: null,
   footerText: "",
+  footerLayoutMode: "scroll",
+  footerWidth: 750,
+  footerHeight: 750,
   footerColor: "#000000",
+  footerBgColor: "#ffffff",
   autoPreview: true,
+  htmlMode: false,
   letterCase: false,
   unitControl: false,
   setHighlighterTags: [],
 };
+let defaultBackgroundUrlMap = new Map();
+let defaultBackgroundBasenameMap = new Map();
+const CUSTOM_BG_STORAGE_IMAGE_KEY = "textToImageCustomBgsImage";
+const CUSTOM_BG_STORAGE_HTML_KEY = "textToImageCustomBgsHTML";
+const HTML_FONT_FACE_OPTIONS = new Set(["Ridibatang", "Nanum Gothic"]);
+
+function isHtmlModeEnabled() {
+  return !!extension_settings[extensionName]?.htmlMode;
+}
+function getFooterLayoutMode(settings = extension_settings[extensionName]) {
+  return settings?.footerLayoutMode === "full" ? "full" : "scroll";
+}
+function normalizeHtmlFontFace(value) {
+  return HTML_FONT_FACE_OPTIONS.has(value) ? value : defaultSettings.htmlFontFace;
+}
+function getHtmlFontFace(settings = extension_settings[extensionName]) {
+  return normalizeHtmlFontFace(settings?.htmlFontFace);
+}
+function getHtmlPreviewFontFamily(settings = extension_settings[extensionName]) {
+  return getHtmlFontFace(settings) === "Nanum Gothic" ? "Pretendard-Regular" : "RIDIBatang";
+}
+function parsePositiveInt(value, fallback) {
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+function updateFooterLayoutUIState() {
+  const isScroll = $("#footer_layout_mode").val() !== "full";
+  $("#footer .footer-scroll-only").toggleClass("footer-scroll-only-hidden", !isScroll);
+}
+function ensureFontSizeSettings() {
+  const settings = extension_settings[extensionName];
+  const legacyFontSize = parseInt(settings.fontSize, 10);
+  const imageSize = parseInt(settings.fontSizeImage, 10);
+  const htmlSize = parseInt(settings.fontSizeHtml, 10);
+
+  settings.fontSizeImage = Number.isFinite(imageSize)
+    ? imageSize
+    : (Number.isFinite(legacyFontSize) ? legacyFontSize : defaultSettings.fontSizeImage);
+  settings.fontSizeHtml = Number.isFinite(htmlSize)
+    ? htmlSize
+    : defaultSettings.fontSizeHtml;
+  settings.fontSize = isHtmlModeEnabled() ? settings.fontSizeHtml : settings.fontSizeImage;
+}
+function getActiveFontSize(settings = extension_settings[extensionName]) {
+  return isHtmlModeEnabled()
+    ? (parseInt(settings.fontSizeHtml, 10) || defaultSettings.fontSizeHtml)
+    : (parseInt(settings.fontSizeImage, 10) || defaultSettings.fontSizeImage);
+}
+function getCustomBackgroundStorageKey() {
+  return isHtmlModeEnabled() ? CUSTOM_BG_STORAGE_HTML_KEY : CUSTOM_BG_STORAGE_IMAGE_KEY;
+}
+function getSelectedBackgroundForCurrentMode() {
+  const settings = extension_settings[extensionName];
+  if (isHtmlModeEnabled()) {
+    return settings.selectedBackgroundImageHtml || settings.selectedBackgroundImage;
+  }
+  return settings.selectedBackgroundImage;
+}
+function setSelectedBackgroundForCurrentMode(path) {
+  if (isHtmlModeEnabled()) {
+    extension_settings[extensionName].selectedBackgroundImageHtml = path;
+  } else {
+    extension_settings[extensionName].selectedBackgroundImage = path;
+  }
+}
+function syncSelectedBackgroundUI() {
+  const selectedPath = getSelectedBackgroundForCurrentMode();
+  $(".bg-image-item").removeClass("selected");
+  if (selectedPath) {
+    $(`.bg-image-item[data-path="${selectedPath}"]`).addClass("selected");
+  }
+}
+let rangeValueTooltip = null;
+let isImageConvertButtonSetup = false;
+function ensureRangeValueTooltip() {
+  if (rangeValueTooltip && document.body.contains(rangeValueTooltip)) {
+    return rangeValueTooltip;
+  }
+  rangeValueTooltip = document.createElement("div");
+  rangeValueTooltip.className = "range-value-tooltip";
+  document.body.appendChild(rangeValueTooltip);
+  return rangeValueTooltip;
+}
+function formatRangeValue(value, step) {
+  const stepValue = parseFloat(step || "1");
+  if (!Number.isFinite(stepValue) || stepValue >= 1) {
+    return String(parseInt(value, 10));
+  }
+  const fixed = stepValue.toString().split(".")[1]?.length || 2;
+  return Number(value).toFixed(fixed).replace(/0+$/, "").replace(/\.$/, "");
+}
+function showRangeTooltip(input) {
+  const tooltip = ensureRangeValueTooltip();
+  const min = parseFloat(input.min || "0");
+  const max = parseFloat(input.max || "100");
+  const value = parseFloat(input.value || "0");
+  const percentage = max > min ? (value - min) / (max - min) : 0;
+  const rect = input.getBoundingClientRect();
+  const x = rect.left + (rect.width * percentage) + window.scrollX;
+  const y = rect.top + window.scrollY - 30;
+
+  tooltip.textContent = formatRangeValue(input.value, input.step);
+  tooltip.style.left = `${x}px`;
+  tooltip.style.top = `${y}px`;
+  tooltip.classList.add("shown");
+}
+function hideRangeTooltip() {
+  if (!rangeValueTooltip) return;
+  rangeValueTooltip.classList.remove("shown");
+}
+function setupRangeValueTooltips() {
+  const selector = [
+    "#tti_font_size_image",
+    "#tti_font_size_html",
+    "#tti_letter_spacing",
+    "#tti_line_height",
+    "#bg_blur",
+    "#bg_brightness",
+    "#bg_hue",
+    "#bg_grayscale",
+    "#bg_noise",
+    "#overlay_opacity",
+  ].join(", ");
+  $(document).on("input", selector, function () {
+    showRangeTooltip(this);
+  });
+  $(document).on("pointerdown focus mouseenter", selector, function () {
+    showRangeTooltip(this);
+  });
+  $(document).on("pointerup blur mouseleave", selector, function () {
+    hideRangeTooltip();
+  });
+}
 
 
 async function initSettings() {
   extension_settings[extensionName] = {...defaultSettings, ...extension_settings[extensionName]};
+  ensureFontSizeSettings();
   const {
     fontFamily,
-    fontSize,
+    fontSizeImage,
+    fontSizeHtml,
+    htmlFontFace,
     fontSpacing,
     fontLineHeight,
     fontAlign,
@@ -69,6 +217,9 @@ async function initSettings() {
     strikethroughFontColor,
     useUnderlineColor,
     underlineFontColor,
+    blockquoteFontColor,
+    blockquoteBgColor,
+    blockquoteBorderColor,
     strokeWidth,
     lineBreak,
     imageRatio,
@@ -86,14 +237,21 @@ async function initSettings() {
     overlayColor,
     currentPreset,
     footerText,
+    footerLayoutMode,
+    footerWidth,
+    footerHeight,
     footerColor,
+    footerBgColor,
     autoPreview,
+    htmlMode,
     letterCase,
     unitControl,
   } = extension_settings[extensionName];
 
   $("#tti_font_family").val(fontFamily);
-  $("#tti_font_size").val(fontSize);
+  $("#tti_font_size_image").val(fontSizeImage);
+  $("#tti_font_size_html").val(fontSizeHtml);
+  $("#tti_html_font_face").val(normalizeHtmlFontFace(htmlFontFace));
   $("#tti_letter_spacing").val(fontSpacing);
   $("#tti_line_height").val(fontLineHeight);
   $("#tti_font_align").val(fontAlign);
@@ -108,6 +266,9 @@ async function initSettings() {
   $("#tti_strikethrough_font_color").val(strikethroughFontColor);
   $("#use_underline_color").prop("checked", useUnderlineColor);
   $("#tti_underline_font_color").val(underlineFontColor);
+  $("#tti_blockquote_font_color").val(blockquoteFontColor || defaultSettings.blockquoteFontColor);
+  $("#tti_blockquote_bg_color").val(blockquoteBgColor || defaultSettings.blockquoteBgColor);
+  $("#tti_blockquote_border_color").val(blockquoteBorderColor || defaultSettings.blockquoteBorderColor);
   $("#tti_stroke_width").val(strokeWidth);
   $("#tti_line_break").val(lineBreak);
   $("#tti_ratio").val(imageRatio);
@@ -124,14 +285,22 @@ async function initSettings() {
   $("#overlay_opacity").val(overlayOpacity);
   $("#overlay_color").val(overlayColor);
   $("#footer_text").val(footerText);
+  $("#footer_layout_mode").val(getFooterLayoutMode(extension_settings[extensionName]));
+  $("#footer_width").val(parsePositiveInt(footerWidth, defaultSettings.footerWidth));
+  $("#footer_height").val(parsePositiveInt(footerHeight, defaultSettings.footerHeight));
   $("#footer_color").val(footerColor);
+  $("#footer_bg_color").val(footerBgColor || defaultSettings.footerBgColor);
   $("#preview_toggle").prop("checked", autoPreview);
+  $("#html_toggle").prop("checked", htmlMode);
   $("#letter_control").prop("checked", letterCase);
   $("#unit_control").prop("checked", unitControl);
 
   await loadFonts();
   await loadBG();
+  await loadBackgroundURLMap();
   highlighterTags();
+  applyHtmlModeUIState();
+  updateFooterLayoutUIState();
 
   if (currentPreset && extension_settings[extensionName].presets[currentPreset]) {
     applyPreset(currentPreset);
@@ -154,6 +323,12 @@ function getPresetSettings() {
   const settings = {...extension_settings[extensionName]};
   delete settings.presets;
   delete settings.currentPreset;
+  const imageFontSize = parseInt($("#tti_font_size_image").val(), 10);
+  const htmlFontSize = parseInt($("#tti_font_size_html").val(), 10);
+  settings.fontSizeImage = Number.isFinite(imageFontSize) ? imageFontSize : (settings.fontSizeImage || defaultSettings.fontSizeImage);
+  settings.fontSizeHtml = Number.isFinite(htmlFontSize) ? htmlFontSize : (settings.fontSizeHtml || defaultSettings.fontSizeHtml);
+  settings.fontSize = settings.htmlMode ? settings.fontSizeHtml : settings.fontSizeImage;
+  settings.htmlFontFace = normalizeHtmlFontFace($("#tti_html_font_face").val());
 
   if (currentCustomFont && oriFontFamily) {
     settings.fontFamily = oriFontFamily;
@@ -171,20 +346,23 @@ function getPresetSettings() {
   settings.backgroundColor = $("#background_color").val();
   settings.useSecondBackgroundColor = $("#use_second_background_color").prop("checked");
   settings.secondBackgroundColor = $("#second_background_color").val();
+  settings.blockquoteFontColor = $("#tti_blockquote_font_color").val();
+  settings.blockquoteBgColor = $("#tti_blockquote_bg_color").val();
+  settings.blockquoteBorderColor = $("#tti_blockquote_border_color").val();
   settings.footerText = $("#footer_text").val();
+  settings.footerLayoutMode = $("#footer_layout_mode").val();
+  settings.footerWidth = parsePositiveInt($("#footer_width").val(), defaultSettings.footerWidth);
+  settings.footerHeight = parsePositiveInt($("#footer_height").val(), defaultSettings.footerHeight);
   settings.footerColor = $("#footer_color").val();
+  settings.footerBgColor = $("#footer_bg_color").val();
   settings.autoPreview = $("#preview_toggle").prop("checked");
+  settings.htmlMode = $("#html_toggle").prop("checked");
+  settings.fontSize = settings.htmlMode ? settings.fontSizeHtml : settings.fontSizeImage;
   settings.letterCase = $("#letter_control").is(":checked");
   settings.unitControl = $("#unit_control").is(":checked");
-  const currentAddedTags = [];
-  $("#custom-highlighter .tag-item").each(function() {
-    const index = $(this).data("index");
-    if (extension_settings[extensionName].setHighlighterTags && 
-        extension_settings[extensionName].setHighlighterTags[index]) {
-      currentAddedTags.push({...extension_settings[extensionName].setHighlighterTags[index]});
-    }
-  });
-  settings.setHighlighterTags = currentAddedTags;
+  settings.setHighlighterTags = JSON.parse(
+    JSON.stringify(extension_settings[extensionName].setHighlighterTags || [])
+  );
   
   return settings;
 }
@@ -201,6 +379,7 @@ function createPreset() {
     if (!confirmOverwrite) return;
   }
   const currentSettings = getPresetSettings();
+  currentSettings.htmlMode = $("#html_toggle").prop("checked");
   presets[presetName] = currentSettings;
   extension_settings[extensionName].presets = presets;
   extension_settings[extensionName].currentPreset = presetName;
@@ -210,6 +389,7 @@ function createPreset() {
 function savePreset() {
   const presetName = $("#preset_selector").val();
   const currentSettings = getPresetSettings();
+  currentSettings.htmlMode = $("#html_toggle").prop("checked");
   extension_settings[extensionName].presets[presetName] = currentSettings;
   saveSettings();
 }
@@ -255,7 +435,9 @@ function deletePreset() {
     };
 
     $("#tti_font_family").val(defaultSettings.fontFamily);
-    $("#tti_font_size").val(defaultSettings.fontSize);
+    $("#tti_font_size_image").val(defaultSettings.fontSizeImage);
+    $("#tti_font_size_html").val(defaultSettings.fontSizeHtml);
+    $("#tti_html_font_face").val(defaultSettings.htmlFontFace);
     $("#tti_letter_spacing").val(defaultSettings.fontSpacing);
     $("#tti_line_height").val(defaultSettings.fontLineHeight);
     $("#tti_font_align").val(defaultSettings.fontAlign);
@@ -270,6 +452,9 @@ function deletePreset() {
     $("#tti_strikethrough_font_color").val(defaultSettings.strikethroughFontColor);
     $("#use_underline_color").prop("checked", defaultSettings.useUnderlineColor);
     $("#tti_underline_font_color").val(defaultSettings.underlineFontColor);
+    $("#tti_blockquote_font_color").val(defaultSettings.blockquoteFontColor);
+    $("#tti_blockquote_bg_color").val(defaultSettings.blockquoteBgColor);
+    $("#tti_blockquote_border_color").val(defaultSettings.blockquoteBorderColor);
     $("#tti_stroke_width").val(defaultSettings.strokeWidth);
     $("#tti_line_break").val(defaultSettings.lineBreak);
     $("#tti_ratio").val(defaultSettings.imageRatio);
@@ -293,18 +478,22 @@ function deletePreset() {
     $("#background_color").val(defaultSettings.backgroundColor);
     $("#use_second_background_color").prop("checked", defaultSettings.useSecondBackgroundColor);
     $("#second_background_color").val(defaultSettings.secondBackgroundColor);
-    $(".bg-image-item").removeClass("selected");
-    $(`.bg-image-item[data-path="${defaultSettings.selectedBackgroundImage}"]`).addClass(
-      "selected"
-    );
+    syncSelectedBackgroundUI();
     $("#footer_text").val("");
+    $("#footer_layout_mode").val(defaultSettings.footerLayoutMode);
+    $("#footer_width").val(defaultSettings.footerWidth);
+    $("#footer_height").val(defaultSettings.footerHeight);
     $("#footer_color").val(defaultSettings.footerColor);
+    $("#footer_bg_color").val(defaultSettings.footerBgColor);
     $("#preview_toggle").prop("checked", defaultSettings.autoPreview);
+    $("#html_toggle").prop("checked", defaultSettings.htmlMode);
     $("#letter_control").prop("checked", defaultSettings.letterCase);
     $("#unit_control").prop("checked", defaultSettings.unitControl);
     extension_settings[extensionName].setHighlighterTags = [];
 
     highlighterTags();
+    applyHtmlModeUIState();
+    updateFooterLayoutUIState();
   }
   saveSettings();
   updatePresetSelector();
@@ -331,7 +520,9 @@ function selectPreset() {
       oriFontFamily = defaultSettings.fontFamily;
     }
     $("#tti_font_family").val(defaultSettings.fontFamily);
-    $("#tti_font_size").val(defaultSettings.fontSize);
+    $("#tti_font_size_image").val(defaultSettings.fontSizeImage);
+    $("#tti_font_size_html").val(defaultSettings.fontSizeHtml);
+    $("#tti_html_font_face").val(defaultSettings.htmlFontFace);
     $("#tti_letter_spacing").val(defaultSettings.fontSpacing);
     $("#tti_line_height").val(defaultSettings.fontLineHeight);
     $("#tti_font_align").val(defaultSettings.fontAlign);
@@ -346,6 +537,9 @@ function selectPreset() {
     $("#tti_strikethrough_font_color").val(defaultSettings.strikethroughFontColor);
     $("#use_underline_color").prop("checked", defaultSettings.useUnderlineColor);
     $("#tti_underline_font_color").val(defaultSettings.underlineFontColor);
+    $("#tti_blockquote_font_color").val(defaultSettings.blockquoteFontColor);
+    $("#tti_blockquote_bg_color").val(defaultSettings.blockquoteBgColor);
+    $("#tti_blockquote_border_color").val(defaultSettings.blockquoteBorderColor);
     $("#tti_stroke_width").val(defaultSettings.strokeWidth);
     $("#tti_line_break").val(defaultSettings.lineBreak);
     $("#tti_ratio").val(defaultSettings.imageRatio);
@@ -369,18 +563,22 @@ function selectPreset() {
     $("#background_color").val(defaultSettings.backgroundColor);
     $("#use_second_background_color").prop("checked", defaultSettings.useSecondBackgroundColor);
     $("#second_background_color").val(defaultSettings.secondBackgroundColor);
-    $(".bg-image-item").removeClass("selected");
-    $(`.bg-image-item[data-path="${defaultSettings.selectedBackgroundImage}"]`).addClass(
-      "selected"
-    );
+    syncSelectedBackgroundUI();
     $("#footer_text").val("");
+    $("#footer_layout_mode").val(defaultSettings.footerLayoutMode);
+    $("#footer_width").val(defaultSettings.footerWidth);
+    $("#footer_height").val(defaultSettings.footerHeight);
     $("#footer_color").val(defaultSettings.footerColor);
+    $("#footer_bg_color").val(defaultSettings.footerBgColor);
     $("#preview_toggle").prop("checked", defaultSettings.autoPreview);
+    $("#html_toggle").prop("checked", defaultSettings.htmlMode);
     $("#letter_control").prop("checked", defaultSettings.letterCase);
     $("#unit_control").prop("checked", defaultSettings.unitControl);
 
     extension_settings[extensionName].setHighlighterTags = [];
     highlighterTags();
+    applyHtmlModeUIState();
+    updateFooterLayoutUIState();
 
     refreshPreview();
   } else if (presetName) {
@@ -394,6 +592,11 @@ function selectPreset() {
 function applyPreset(presetName) {
   const presets = extension_settings[extensionName].presets;
   const preset = presets[presetName];
+  if (!preset) return;
+  const presetHtmlMode = !!preset.htmlMode;
+
+  extension_settings[extensionName].htmlMode = presetHtmlMode;
+  $("#html_toggle").prop("checked", presetHtmlMode);
 
   const wordPairs = [
     {original: "originalWord1", replacement: "replacementWord1", id: "1"},
@@ -418,6 +621,9 @@ function applyPreset(presetName) {
         "originalWord4",
         "replacementWord4",
         "setHighlighterTags",
+        "fontSize",
+        "fontSizeImage",
+        "fontSizeHtml",
       ].includes(key)
     ) {
       continue;
@@ -434,8 +640,9 @@ function applyPreset(presetName) {
       case "fontFamily":
         $("#tti_font_family").val(value);
         break;
-      case "fontSize":
-        $("#tti_font_size").val(value);
+      case "htmlFontFace":
+        extension_settings[extensionName].htmlFontFace = normalizeHtmlFontFace(value);
+        $("#tti_html_font_face").val(extension_settings[extensionName].htmlFontFace);
         break;
       case "fontSpacing":
         $("#tti_letter_spacing").val(value);
@@ -479,6 +686,15 @@ function applyPreset(presetName) {
       case "underlineFontColor":
         $("#tti_underline_font_color").val(value);
         break;
+      case "blockquoteFontColor":
+        $("#tti_blockquote_font_color").val(value || defaultSettings.blockquoteFontColor);
+        break;
+      case "blockquoteBgColor":
+        $("#tti_blockquote_bg_color").val(value || defaultSettings.blockquoteBgColor);
+        break;
+      case "blockquoteBorderColor":
+        $("#tti_blockquote_border_color").val(value || defaultSettings.blockquoteBorderColor);
+        break;
       case "strokeWidth":
         $("#tti_stroke_width").val(value);
         break;
@@ -513,8 +729,10 @@ function applyPreset(presetName) {
         $("#overlay_color").val(value);
         break;
       case "selectedBackgroundImage":
-        $(".bg-image-item").removeClass("selected");
-        $(`.bg-image-item[data-path="${value}"]`).addClass("selected");
+        syncSelectedBackgroundUI();
+        break;
+      case "selectedBackgroundImageHtml":
+        syncSelectedBackgroundUI();
         break;
       case "useBackgroundColor":
         $("#use_background_color").prop("checked", value);
@@ -531,11 +749,27 @@ function applyPreset(presetName) {
       case "footerText":
         $("#footer_text").val(value);
         break;
+      case "footerLayoutMode":
+        $("#footer_layout_mode").val(getFooterLayoutMode({footerLayoutMode: value}));
+        updateFooterLayoutUIState();
+        break;
+      case "footerWidth":
+        $("#footer_width").val(parsePositiveInt(value, defaultSettings.footerWidth));
+        break;
+      case "footerHeight":
+        $("#footer_height").val(parsePositiveInt(value, defaultSettings.footerHeight));
+        break;
       case "footerColor":
         $("#footer_color").val(value);
         break;
+      case "footerBgColor":
+        $("#footer_bg_color").val(value || defaultSettings.footerBgColor);
+        break;
       case "autoPreview":
         $("#preview_toggle").prop("checked", value);
+        break;
+      case "htmlMode":
+        $("#html_toggle").prop("checked", value);
         break;
       case "letterCase":
         $("#letter_control").prop("checked", value);
@@ -546,6 +780,38 @@ function applyPreset(presetName) {
     }
   }
 
+  if (!Object.prototype.hasOwnProperty.call(preset, "blockquoteFontColor")) {
+    extension_settings[extensionName].blockquoteFontColor = defaultSettings.blockquoteFontColor;
+    $("#tti_blockquote_font_color").val(defaultSettings.blockquoteFontColor);
+  }
+  if (!Object.prototype.hasOwnProperty.call(preset, "blockquoteBgColor")) {
+    extension_settings[extensionName].blockquoteBgColor = defaultSettings.blockquoteBgColor;
+    $("#tti_blockquote_bg_color").val(defaultSettings.blockquoteBgColor);
+  }
+  if (!Object.prototype.hasOwnProperty.call(preset, "blockquoteBorderColor")) {
+    extension_settings[extensionName].blockquoteBorderColor = defaultSettings.blockquoteBorderColor;
+    $("#tti_blockquote_border_color").val(defaultSettings.blockquoteBorderColor);
+  }
+  if (!Object.prototype.hasOwnProperty.call(preset, "htmlFontFace")) {
+    extension_settings[extensionName].htmlFontFace = defaultSettings.htmlFontFace;
+    $("#tti_html_font_face").val(defaultSettings.htmlFontFace);
+  }
+
+  const presetImageFontSize = parseInt(preset.fontSizeImage, 10);
+  const presetHtmlFontSize = parseInt(preset.fontSizeHtml, 10);
+  const legacyPresetFontSize = parseInt(preset.fontSize, 10);
+  extension_settings[extensionName].fontSizeImage = Number.isFinite(presetImageFontSize)
+    ? presetImageFontSize
+    : (Number.isFinite(legacyPresetFontSize) ? legacyPresetFontSize : defaultSettings.fontSizeImage);
+  extension_settings[extensionName].fontSizeHtml = Number.isFinite(presetHtmlFontSize)
+    ? presetHtmlFontSize
+    : defaultSettings.fontSizeHtml;
+  extension_settings[extensionName].fontSize = isHtmlModeEnabled()
+    ? extension_settings[extensionName].fontSizeHtml
+    : extension_settings[extensionName].fontSizeImage;
+  $("#tti_font_size_image").val(extension_settings[extensionName].fontSizeImage);
+  $("#tti_font_size_html").val(extension_settings[extensionName].fontSizeHtml);
+
   if (preset.setHighlighterTags) {
     extension_settings[extensionName].setHighlighterTags = JSON.parse(JSON.stringify(preset.setHighlighterTags));
   } else {
@@ -553,6 +819,10 @@ function applyPreset(presetName) {
   }
 
   highlighterTags();
+  applyHtmlModeUIState();
+  updateFooterLayoutUIState();
+  loadCustomBG();
+  syncSelectedBackgroundUI();
   saveSettings();
   refreshPreview();
 }
@@ -853,7 +1123,6 @@ function ITxtChunk(key, encoded) {
 function replaceChunks(uint8Array, newChunks) {
   const chunks = [];
   let offset = 0;
-  const replacedWords = new Set();
   chunks.push(uint8Array.slice(0, 8));
   offset = 8;
   const view = new DataView(uint8Array.buffer, uint8Array.byteOffset);
@@ -956,6 +1225,8 @@ async function loadFonts() {
 let currentCustomFont = null;
 let oriFontFamily = null;
 function addLocalFont() {
+  if (isHtmlModeEnabled()) return;
+
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = '.ttf,.otf,.woff,.woff2';
@@ -994,6 +1265,7 @@ function addLocalFont() {
         $("#upload-local-font").text("로컬 폰트 변경");
         $("#delete-local-font").prop("disabled", false);
         
+        applyHtmlModeUIState();
         refreshPreview();
       }).catch(function(error) {
         console.error('폰트 로드 실패:', error);
@@ -1031,42 +1303,109 @@ function deleteLocalFont() {
   $("#upload-local-font").text("로컬 폰트 등록");
   $("#delete-local-font").prop("disabled", true);
   
+  applyHtmlModeUIState();
   saveSettings();
   refreshPreview();
 }
+function applyHtmlModeUIState() {
+  const htmlMode = isHtmlModeEnabled();
+
+  $("[data-html-hide]").toggleClass("html-mode-hidden", htmlMode);
+  $("[data-html-only]").toggleClass("html-mode-only", !htmlMode);
+
+  $("#tti_font_family").prop("disabled", htmlMode || !!currentCustomFont);
+  $("#upload-local-font").prop("disabled", htmlMode);
+  $("#delete-local-font").prop("disabled", htmlMode || !currentCustomFont);
+  $("#tti_ratio").prop("disabled", htmlMode);
+  $("#tti_fill_mode").prop("disabled", htmlMode);
+  $("#bg_image_upload").prop("disabled", htmlMode);
+  $("#bg_noise").prop("disabled", htmlMode);
+  $("#bg_image_url").prop("disabled", !htmlMode);
+  $("#bg_url_btn").prop("disabled", !htmlMode);
+  $(".tag-font-family").prop("disabled", htmlMode);
+}
 
 // 배경이미지 로드
+async function loadBackgroundURLMap() {
+  try {
+    const response = await fetch(`${extensionFolderPath}/backgrounds-list-url.json`);
+    if (!response.ok) return;
+    const backgroundURLs = await response.json();
+
+    defaultBackgroundUrlMap = new Map();
+    defaultBackgroundBasenameMap = new Map();
+
+    backgroundURLs.forEach((url) => {
+      if (!url || typeof url !== "string") return;
+      const fileName = getBackgroundFilename(url);
+      if (!fileName) return;
+
+      defaultBackgroundUrlMap.set(fileName, url);
+      const baseName = fileName.replace(/\.[^/.]+$/, "");
+      if (!defaultBackgroundBasenameMap.has(baseName)) {
+        defaultBackgroundBasenameMap.set(baseName, url);
+      }
+    });
+  } catch (error) {
+    console.warn("[text-to-image-converter] backgrounds-list-url.json load failed", error);
+  }
+}
+function getBackgroundFilename(pathLike) {
+  if (!pathLike || typeof pathLike !== "string") return "";
+  const filePart = pathLike.split("/").pop() || "";
+  return decodeURIComponent(filePart.split("?")[0].trim()).toLowerCase();
+}
+function resolveBackgroundURLForHTML(backgroundValue) {
+  if (!backgroundValue || typeof backgroundValue !== "string") return "";
+  if (/^(https?:|data:|blob:)/i.test(backgroundValue)) {
+    return backgroundValue;
+  }
+
+  const fileName = getBackgroundFilename(backgroundValue);
+  if (!fileName) return backgroundValue;
+  if (defaultBackgroundUrlMap.has(fileName)) {
+    return defaultBackgroundUrlMap.get(fileName);
+  }
+
+  const baseName = fileName.replace(/\.[^/.]+$/, "");
+  if (defaultBackgroundBasenameMap.has(baseName)) {
+    return defaultBackgroundBasenameMap.get(baseName);
+  }
+  return backgroundValue;
+}
 async function loadBG() {
   const response = await fetch(`${extensionFolderPath}/backgrounds-list.json`);
   const backgrounds = await response.json();
   const gallery = $("#background_image_gallery").empty();
-  backgrounds.forEach((bg) => {
+  const selectedBackground = getSelectedBackgroundForCurrentMode();
+  const galleryHtml = backgrounds.map((bg) => {
     const bgPath = `${extensionFolderPath}/default-backgrounds/${bg}`;
-    const isSelected = extension_settings[extensionName].selectedBackgroundImage === bgPath;
-    gallery.append(`
+    const isSelected = selectedBackground === bgPath;
+    return `
       <div class="bg-image-item ${isSelected ? "selected" : ""}" data-path="${bgPath}">
-        <img src="${bgPath}" alt="${bg}" />
+        <img src="${bgPath}" alt="${bg}" loading="lazy" decoding="async" />
       </div>
-    `);
-  });
+    `;
+  }).join("");
+  gallery.html(galleryHtml);
   $(".bg-image-item").on("click", selectCanvasBG);
 }
-function storeBackground(name, imageData) {
-  const customBackgrounds = JSON.parse(localStorage.getItem("textToImageCustomBgs") || "{}");
+function storeBackground(name, imageData, storageKey = getCustomBackgroundStorageKey()) {
+  const customBackgrounds = JSON.parse(localStorage.getItem(storageKey) || "{}");
   customBackgrounds[name] = imageData;
-  localStorage.setItem("textToImageCustomBgs", JSON.stringify(customBackgrounds));
+  localStorage.setItem(storageKey, JSON.stringify(customBackgrounds));
 }
-function deleteBackground(name) {
-  const customBackgrounds = JSON.parse(localStorage.getItem("textToImageCustomBgs") || "{}");
+function deleteBackground(name, storageKey = getCustomBackgroundStorageKey()) {
+  const customBackgrounds = JSON.parse(localStorage.getItem(storageKey) || "{}");
   delete customBackgrounds[name];
-  localStorage.setItem("textToImageCustomBgs", JSON.stringify(customBackgrounds));
+  localStorage.setItem(storageKey, JSON.stringify(customBackgrounds));
 }
 
 // 커스텀 배경이미지 로드
-function loadCustomBG() {
-  const customBackgrounds = JSON.parse(localStorage.getItem("textToImageCustomBgs") || "{}");
+function loadCustomBG(storageKey = getCustomBackgroundStorageKey()) {
+  const customBackgrounds = JSON.parse(localStorage.getItem(storageKey) || "{}");
   const gallery = $("#custom_background_gallery").empty();
-  Object.entries(customBackgrounds).forEach(([name, imageData]) => addBGtoGallery(name, imageData));
+  Object.entries(customBackgrounds).forEach(([name, imageData]) => addBGtoGallery(name, imageData, storageKey));
 }
 function customBG() {
   $("#bg_image_upload").on("change", uploadImage);
@@ -1074,45 +1413,25 @@ function customBG() {
   loadCustomBG();
 }
 function uploadImageFromURL() {
+  if (!isHtmlModeEnabled()) return;
+
   const url = $("#bg_image_url").val().trim();
   if (!url) return;
-  
-  const img = new Image();
-  const proxy = "https://cors-anywhere.herokuapp.com/";
-  img.crossOrigin = "anonymous";
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  
-  img.onload = () => {
-    const max_size = 800;
-    let width = img.width;
-    let height = img.height;
-    if (width > height && width > max_size) {
-      height *= max_size / width;
-      width = max_size;
-    } else if (height > max_size) {
-      width *= max_size / height;
-      height = max_size;
-    }
-    canvas.width = width;
-    canvas.height = height;
-    ctx.drawImage(img, 0, 0, width, height);
-    const imageData = canvas.toDataURL('image/jpeg', 0.8);
-    
-    const fileName = url.split('/').pop().split('?')[0] || 'url-image-' + Date.now();
-    storeBackground(fileName, imageData);
-    addBGtoGallery(fileName, imageData);
-    $("#bg_image_url").val("");
-  };  
-  img.src = proxy + url;
+
+  const fileName = url.split('/').pop().split('?')[0] || 'url-image-' + Date.now();
+  const storageKey = getCustomBackgroundStorageKey();
+
+  storeBackground(fileName, url, storageKey);
+  addBGtoGallery(fileName, url, storageKey);
+  $("#bg_image_url").val("");
 }
-function addBGtoGallery(name, imageData) {
-  const isSelected = extension_settings[extensionName].selectedBackgroundImage === imageData;
+function addBGtoGallery(name, imageData, storageKey = getCustomBackgroundStorageKey()) {
+  const isSelected = getSelectedBackgroundForCurrentMode() === imageData;
   const bgElement = $(`
     <div class="bg-image-item ${
       isSelected ? "selected" : ""
-    }" data-path="${imageData}" data-name="${name}">
-      <img src="${imageData}" alt="${name}" />
+    }" data-path="${imageData}" data-name="${name}" data-storage-key="${storageKey}">
+      <img src="${imageData}" alt="${name}" loading="lazy" decoding="async" />
       <div class="delete-bg-btn">×</div>
     </div>
   `);
@@ -1122,8 +1441,11 @@ function addBGtoGallery(name, imageData) {
 }
 
 function uploadImage(event) {
+  if (isHtmlModeEnabled()) return;
+
   const file = event.target.files[0];
   if (!file) return;
+  const storageKey = getCustomBackgroundStorageKey();
   const img = new Image();
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -1142,8 +1464,8 @@ function uploadImage(event) {
     canvas.height = height;
     ctx.drawImage(img, 0, 0, width, height);
     const imageData = canvas.toDataURL('image/jpeg', 0.8);
-    storeBackground(file.name, imageData);
-    addBGtoGallery(file.name, imageData);
+    storeBackground(file.name, imageData, storageKey);
+    addBGtoGallery(file.name, imageData, storageKey);
     $("#bg_image_upload").val("");
   };
   const ImageReader = new FileReader();
@@ -1155,10 +1477,10 @@ function uploadImage(event) {
 function removeCustomBg(event) {
   event.stopPropagation();
   const bgItem = $(this).closest(".bg-image-item");
-  deleteBackground(bgItem.data("name"));
+  deleteBackground(bgItem.data("name"), bgItem.data("storage-key"));
   bgItem.remove();
   if (bgItem.hasClass("selected")) {
-    extension_settings[extensionName].selectedBackgroundImage = null;
+    setSelectedBackgroundForCurrentMode(null);
     saveSettings();
     refreshPreview();
   }
@@ -1225,7 +1547,7 @@ function selectCanvasBG(event) {
   const path = $(this).data("path");
   $(".bg-image-item").removeClass("selected");
   $(this).addClass("selected");
-  extension_settings[extensionName].selectedBackgroundImage = path;
+  setSelectedBackgroundForCurrentMode(path);
   saveSettings();
   refreshPreview();
 }
@@ -1265,20 +1587,38 @@ function unitControl(event) {
   saveSettings();
 }
 function setupWordReplacer() {
-  let originalText = "";
+  let originalSnapshot = null;
   $("#apply_replacement").on("click", () => {
-    originalText = $("#text_to_image").val();
+    originalSnapshot = {
+      mainText: $("#text_to_image").val(),
+      switcherTexts: $("#tti_html_switcher_list .tti-html-switcher-text").map(function () {
+        return $(this).val();
+      }).get(),
+    };
     replaceWords();
   });
   $("#restore_text").on("click", () => {
-    if (originalText !== "") {
-      $("#text_to_image").val(originalText);
-      refreshPreview();
+    if (!originalSnapshot) return;
+
+    $("#text_to_image").val(originalSnapshot.mainText ?? "");
+
+    const $switcherList = $("#tti_html_switcher_list");
+    if ($switcherList.length) {
+      $switcherList.empty();
+      (originalSnapshot.switcherTexts || []).forEach((value) => {
+        if (typeof appendHtmlSwitcherInput === "function") {
+          appendHtmlSwitcherInput(value);
+        }
+      });
+      if (typeof syncHtmlSwitcherInputUIState === "function") {
+        syncHtmlSwitcherInputUIState();
+      }
     }
+
+    refreshPreview();
   });
 }
 function replaceWords() {
-  let text = $("#text_to_image").val();
   letterCase = extension_settings[extensionName].letterCase;
   unitControl = extension_settings[extensionName].unitControl;
 
@@ -1305,58 +1645,65 @@ function replaceWords() {
     return;
   }
 
-  const originalTemp = wordGroup.map((_, index) => `__REPLACE_${Date.now()}_${index}__`);
+  const applyWordReplacement = (inputText) => {
+    let text = String(inputText ?? "");
+    const originalTemp = wordGroup.map((_, index) => `__REPLACE_${Date.now()}_${index}__`);
 
-  for (let i = 0; i < wordGroup.length; i++) {
-    const { original, replacement } = wordGroup[i];
-    const temp = originalTemp[i];
-    const oriMulWord = original.split('||').map(word => word.trim()).filter(word => word);
+    for (let i = 0; i < wordGroup.length; i++) {
+      const { original } = wordGroup[i];
+      const temp = originalTemp[i];
+      const oriMulWord = original.split('||').map(word => word.trim()).filter(word => word);
 
-    for (const origWord of oriMulWord) {
-      const containsKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(origWord);
-      if (containsKorean) {
-        text = findKoreanWord(text, origWord, temp, unitControl);
-      } else {
-        text = replaceString(text, origWord, temp, letterCase, unitControl);
+      for (const origWord of oriMulWord) {
+        const containsKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(origWord);
+        if (containsKorean) {
+          text = findKoreanWord(text, origWord, temp, unitControl);
+        } else {
+          text = replaceString(text, origWord, temp, letterCase, unitControl);
+        }
       }
     }
-  }
 
-  for (let i = 0; i < wordGroup.length; i++) {
-    const {replacement} = wordGroup[i];
-    const temp = originalTemp[i];
-    const replacementText = replacement !== undefined ? replacement : "";
+    for (let i = 0; i < wordGroup.length; i++) {
+      const {replacement} = wordGroup[i];
+      const temp = originalTemp[i];
+      const replacementText = replacement !== undefined ? replacement : "";
+      const regex = new RegExp(`${escapeRegExp(temp)}(은|는|이|가|을|를|과|와|이랑|랑|으로|로|아|야)?`, "g");
 
-    const regex = new RegExp(`${escapeRegExp(temp)}(은|는|이|가|을|를|과|와|이랑|랑|으로|로|아|야)?`, "g");
+      text = text.replace(regex, (match, particle) => {
+        if (!particle) {
+          return replacementText;
+        }
 
-    text = text.replace(regex, (match, particle) => {
-      if (!particle) {
-        return replacementText;
-      }
-      
-      let newParticle = particle;
-      const hasEndConsonant = hasConsonantLetter(replacementText);
+        let newParticle = particle;
+        const hasEndConsonant = hasConsonantLetter(replacementText);
 
-      if (particle === "는" && hasEndConsonant) newParticle = "은";
-      else if (particle === "은" && !hasEndConsonant) newParticle = "는";
-      else if (particle === "가" && hasEndConsonant) newParticle = "이";
-      else if (particle === "이" && !hasEndConsonant) newParticle = "가";
-      else if (particle === "를" && hasEndConsonant) newParticle = "을";
-      else if (particle === "을" && !hasEndConsonant) newParticle = "를";
-      else if (particle === "아" && !hasEndConsonant) newParticle = "야";
-      else if (particle === "야" && hasEndConsonant) newParticle = "아";
-      else if (particle === "와" && hasEndConsonant) newParticle = "과";
-      else if (particle === "과" && !hasEndConsonant) newParticle = "와";
-      else if (particle === "랑" && hasEndConsonant) newParticle = "이랑";
-      else if (particle === "이랑" && !hasEndConsonant) newParticle = "랑";
-      else if (particle === "로" && hasEndConsonant) newParticle = "으로";
-      else if (particle === "으로" && !hasEndConsonant) newParticle = "로";
+        if (particle === "는" && hasEndConsonant) newParticle = "은";
+        else if (particle === "은" && !hasEndConsonant) newParticle = "는";
+        else if (particle === "가" && hasEndConsonant) newParticle = "이";
+        else if (particle === "이" && !hasEndConsonant) newParticle = "가";
+        else if (particle === "를" && hasEndConsonant) newParticle = "을";
+        else if (particle === "을" && !hasEndConsonant) newParticle = "를";
+        else if (particle === "아" && !hasEndConsonant) newParticle = "야";
+        else if (particle === "야" && hasEndConsonant) newParticle = "아";
+        else if (particle === "와" && hasEndConsonant) newParticle = "과";
+        else if (particle === "과" && !hasEndConsonant) newParticle = "와";
+        else if (particle === "랑" && hasEndConsonant) newParticle = "이랑";
+        else if (particle === "이랑" && !hasEndConsonant) newParticle = "랑";
+        else if (particle === "로" && hasEndConsonant) newParticle = "으로";
+        else if (particle === "으로" && !hasEndConsonant) newParticle = "로";
 
-      return replacementText + newParticle;
-    });
-  }
+        return replacementText + newParticle;
+      });
+    }
 
-  $("#text_to_image").val(text);
+    return text;
+  };
+
+  $("#text_to_image").val(applyWordReplacement($("#text_to_image").val()));
+  $("#tti_html_switcher_list .tti-html-switcher-text").each(function () {
+    $(this).val(applyWordReplacement($(this).val()));
+  });
   refreshPreview();
 }
 function replaceString(text, original, replacement, letterCase, unitControl) {
@@ -1396,9 +1743,6 @@ function replaceString(text, original, replacement, letterCase, unitControl) {
   return result;
 }
 function findKoreanWord(text, originalWord, replacementWord, unitControl) {
-  const verbEndingPattern = /^[자고며다요네죠게서써도구나군요까봐서라지거든만큼]/;
-  const particlePattern = /^(?:[은|는|이|가|아|야|의|을|를|로|으로|과|와|께|에게|에서|한테|하고|랑|이랑|도|이도|만|까지|마저|조차|부터|밖에|야말로|서|처럼|보다|였])/;
-
   const specialChar = /[\s\.,;:!?\(\)\[\]{}"'<>\/\\\-_=\+\*&\^%\$#@~`|]/;
   let result = "";
 
@@ -1464,8 +1808,26 @@ function lineBreak(event) {
   saveSettings();
   refreshPreview();
 }
-function fontSize(event) {
-  extension_settings[extensionName].fontSize = event.target.value;
+function fontSizeImage(event) {
+  const value = parseInt(event.target.value, 10) || defaultSettings.fontSizeImage;
+  extension_settings[extensionName].fontSizeImage = value;
+  if (!isHtmlModeEnabled()) {
+    extension_settings[extensionName].fontSize = value;
+  }
+  saveSettings();
+  refreshPreview();
+}
+function fontSizeHtml(event) {
+  const value = parseInt(event.target.value, 10) || defaultSettings.fontSizeHtml;
+  extension_settings[extensionName].fontSizeHtml = value;
+  if (isHtmlModeEnabled()) {
+    extension_settings[extensionName].fontSize = value;
+  }
+  saveSettings();
+  refreshPreview();
+}
+function htmlFontFace(event) {
+  extension_settings[extensionName].htmlFontFace = normalizeHtmlFontFace(event.target.value);
   saveSettings();
   refreshPreview();
 }
@@ -1539,7 +1901,21 @@ function underlineFontColor(event) {
   saveSettings();
   refreshPreview();
 }
-
+function blockquoteFontColor(event) {
+  extension_settings[extensionName].blockquoteFontColor = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
+function blockquoteBgColor(event) {
+  extension_settings[extensionName].blockquoteBgColor = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
+function blockquoteBorderColor(event) {
+  extension_settings[extensionName].blockquoteBorderColor = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
 // 바닥글
 function footerText(event) {
   extension_settings[extensionName].footerText = event.target.value;
@@ -1548,6 +1924,27 @@ function footerText(event) {
 }
 function footerColor(event) {
   extension_settings[extensionName].footerColor = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
+function footerBgColor(event) {
+  extension_settings[extensionName].footerBgColor = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
+function footerLayoutMode(event) {
+  extension_settings[extensionName].footerLayoutMode = event.target.value === "full" ? "full" : "scroll";
+  updateFooterLayoutUIState();
+  saveSettings();
+  refreshPreview();
+}
+function footerWidth(event) {
+  extension_settings[extensionName].footerWidth = parsePositiveInt(event.target.value, defaultSettings.footerWidth);
+  saveSettings();
+  refreshPreview();
+}
+function footerHeight(event) {
+  extension_settings[extensionName].footerHeight = parsePositiveInt(event.target.value, defaultSettings.footerHeight);
   saveSettings();
   refreshPreview();
 }
@@ -1563,6 +1960,54 @@ function autoPreview(event) {
     $(".refresh-preview").addClass("shown");
   }
 }
+function htmlMode(event) {
+  extension_settings[extensionName].htmlMode = event.target.checked;
+  extension_settings[extensionName].fontSize = getActiveFontSize();
+  saveSettings();
+  applyHtmlModeUIState();
+  updateFooterLayoutUIState();
+  loadCustomBG();
+  syncSelectedBackgroundUI();
+  refreshPreview();
+}
+function getPreviewChunks() {
+  const text = $("#text_to_image").val() || "";
+  if (isHtmlModeEnabled()) {
+    return [text];
+  }
+
+  const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
+  return wrappingTexts(text, lineBreak === "byWord" ? "word" : "char");
+}
+function updatePreviewDownloadAllButton(itemCount) {
+  const $previewTitle = $("#image_preview_box h4");
+  const $dlAllBtn = $previewTitle.find(".dl_all");
+
+  if (itemCount >= 2 && !isHtmlModeEnabled()) {
+    if ($dlAllBtn.length === 0) {
+      const $newDlAllBtn = $(
+        '<div class="dl_all"><i class="fa-solid fa-circle-down"></i> 전체 다운로드</div>'
+      );
+      $previewTitle.append($newDlAllBtn);
+      $newDlAllBtn.on("click", () => {
+        autoDownload("#image_preview_container .download-btn", 500);
+      });
+    }
+    return;
+  }
+
+  $dlAllBtn.remove();
+}
+function renderPreviewContent() {
+  const chunks = getPreviewChunks();
+  const $container = $("#image_preview_container").empty();
+
+  chunks.forEach((chunk, i) => {
+    $container.append(isHtmlModeEnabled() ? generateHTMLPreview(chunk, i) : generateTextImage(chunk, i));
+  });
+
+  updatePreviewDownloadAllButton(chunks.length);
+}
 function refreshPreview() {
   $(".refresh-preview").removeClass("shown");
 
@@ -1573,66 +2018,52 @@ function refreshPreview() {
     return;
   }
 
-  const text = $("#text_to_image").val() || "";
-  const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
-  
-  const chunks = wrappingTexts(text, lineBreak === "byWord" ? "word" : "char");
-  
-  const $container = $("#image_preview_container").empty();
-
-  chunks.forEach((chunk, i) => {
-    $container.append(generateTextImage(chunk, i));
-  });
-
-  const imageCount = chunks.length;
-  const $previewTitle = $("#image_preview_box h4");
-  const $dlAllBtn = $previewTitle.find(".dl_all");
-
-  if (imageCount >= 2) {
-    if ($dlAllBtn.length === 0) {
-      const $newDlAllBtn = $(
-        '<div class="dl_all"><i class="fa-solid fa-circle-down"></i> 전체 다운로드</div>'
-      );
-      $previewTitle.append($newDlAllBtn);
-      $newDlAllBtn.on("click", () => {
-        autoDownload("#image_preview_container .download-btn", 500);
-      });
-    }
-  } else {
-    $dlAllBtn.remove();
-  }
+  renderPreviewContent();
 }
 function manualRefresh() {
   if (!extension_settings[extensionName].autoPreview) {
-    const text = $("#text_to_image").val() || "";
-    const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
-    
-    const chunks = wrappingTexts(text, lineBreak === "byWord" ? "word" : "char");
-    
-    const $container = $("#image_preview_container").empty();
-
-    chunks.forEach((chunk, i) => {
-      $container.append(generateTextImage(chunk, i));
-    });
-
-    const imageCount = chunks.length;
-    const $previewTitle = $("#image_preview_box h4");
-    const $dlAllBtn = $previewTitle.find(".dl_all");
-
-    if (imageCount >= 2) {
-      if ($dlAllBtn.length === 0) {
-        const $newDlAllBtn = $(
-          '<div class="dl_all"><i class="fa-solid fa-circle-down"></i> 전체 다운로드</div>'
-        );
-        $previewTitle.append($newDlAllBtn);
-        $newDlAllBtn.on("click", () => {
-          autoDownload("#image_preview_container .download-btn", 500);
-        });
-      }
-    } else {
-      $dlAllBtn.remove();
-    }
+    renderPreviewContent();
   }
+}
+function syncHtmlSwitcherInputUIState() {
+  const hasItems = $("#tti_html_switcher_list .tti-html-switcher-text").length > 0;
+  $(".html-switcher-inputs").toggleClass("has-items", hasItems);
+}
+function appendHtmlSwitcherInput(value = "") {
+  const itemCount = $("#tti_html_switcher_list .html-switcher-input-item").length + 1;
+  const $item = $(`
+    <div class="html-switcher-input-item">
+      <textarea class="tti-html-switcher-text" placeholder="전환 텍스트 ${itemCount}"></textarea>
+      <button type="button" class="html-switcher-remove-btn buttons clear" title="삭제"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  `);
+  $item.find(".tti-html-switcher-text").val(value);
+  $("#tti_html_switcher_list").append($item);
+  syncHtmlSwitcherInputUIState();
+  return $item;
+}
+function getHtmlSwitcherTexts() {
+  return $("#tti_html_switcher_list .tti-html-switcher-text")
+    .map(function () {
+      const value = String($(this).val() || "");
+      return value;
+    })
+    .get()
+    .filter((value) => value.trim().length > 0);
+}
+function setupHtmlSwitcherInputs() {
+  $("#add_html_switcher_text").on("click", () => {
+    const $item = appendHtmlSwitcherInput("");
+    $item.find(".tti-html-switcher-text").trigger("focus");
+    refreshPreview();
+  });
+  $(document).on("input change", "#tti_html_switcher_list .tti-html-switcher-text", refreshPreview);
+  $(document).on("click", "#tti_html_switcher_list .html-switcher-remove-btn", function () {
+    $(this).closest(".html-switcher-input-item").remove();
+    syncHtmlSwitcherInputUIState();
+    refreshPreview();
+  });
+  syncHtmlSwitcherInputUIState();
 }
 
 // 하이라이터 태그
@@ -1646,7 +2077,7 @@ function highlighterTags() {
         <div class="tag-item-left">
           <input type="text" class="tag-name" placeholder="태그이름" value="${tag.name}" />
           <div>            
-            <select class="tag-font-family">
+            <select class="tag-font-family" data-html-hide="tag_font_family">
               <option value="useGlobal" ${(!tag.fontFamily || tag.fontFamily === "useGlobal") ? "selected" : ""}>전역 폰트 사용</option>
             </select>
             <input type="number" class="tag-font-size" value="${tag.fontSize}" min="12" max="50" />
@@ -1678,6 +2109,7 @@ function highlighterTags() {
   });
   const addBtn = $('<button class="add-tag-btn buttons">추가</button>');
   highlightContainer.append(addBtn);
+  applyHtmlModeUIState();
 }
 async function highlighterFonts(fontOption, selectedFont) {
   const fontFamilyName = await fetch(`${extensionFolderPath}/font-family.json`);
@@ -1702,7 +2134,7 @@ function addHighlightTag() {
     fontFamily: "useGlobal",
     fontColor: "#000000",
     bgColor: "#ffffff",
-    fontSize: 24,
+    fontSize: isHtmlModeEnabled() ? 14 : 24,
     strokeWidth: "inherit",
     useTagFontColor: false,
     useTagBgColor: false,
@@ -1723,7 +2155,8 @@ function updateHighlightTag(index, field, value) {
 }
 
 // 마크다운
-function enableMarkdown(text) {
+function enableMarkdown(text, options = {}) {
+  const {allowHeading = true} = options;
   const spans = [];
   let currentText = "";
   let bold = false;
@@ -1731,6 +2164,18 @@ function enableMarkdown(text) {
   let strikethrough = false;
   let underline = false;
   let i = 0;
+  let headingSizeBonus = 0;
+  let sourceText = text;
+
+  if (allowHeading) {
+    const headingMatch = text.match(/^\s*(#{1,3})\s+(.+)$/);
+    if (headingMatch) {
+      const hashCount = headingMatch[1].length;
+      const baseHeadingBonus = (4 - hashCount) * 2;
+      headingSizeBonus = isHtmlModeEnabled() ? baseHeadingBonus : (baseHeadingBonus + 1);
+      sourceText = headingMatch[2];
+    }
+  }
 
   const setHighlighterTags = extension_settings[extensionName].setHighlighterTags || [];
   const tagMap = {};
@@ -1738,22 +2183,22 @@ function enableMarkdown(text) {
     if (tag.name) tagMap[tag.name.toLowerCase()] = tag;
   });
 
-  while (i < text.length) {
-    if (text[i] === '<') {
-      let tagMatch = text.slice(i).match(/^<(\w+)>/);
+  while (i < sourceText.length) {
+    if (sourceText[i] === '<') {
+      let tagMatch = sourceText.slice(i).match(/^<(\w+)>/);
       if (tagMatch && tagMap[tagMatch[1].toLowerCase()]) {
         const tagName = tagMatch[1].toLowerCase();
         const tagSet = tagMap[tagName];
         const closeTag = `</${tagName}>`;
-        const closeIndex = text.indexOf(closeTag, i + tagMatch[0].length);
+        const closeIndex = sourceText.indexOf(closeTag, i + tagMatch[0].length);
         
         if (closeIndex !== -1) {
           if (currentText) {
             spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null});
             currentText = "";
           }
-          const tagContent = text.slice(i + tagMatch[0].length, closeIndex);
-          const innerContents = enableMarkdown(tagContent);
+          const tagContent = sourceText.slice(i + tagMatch[0].length, closeIndex);
+          const innerContents = enableMarkdown(tagContent, {allowHeading: false});
           
           innerContents.forEach(innerContent => {
             if (innerContent.fontFamily || innerContent.fontSize) {
@@ -1780,39 +2225,46 @@ function enableMarkdown(text) {
       }
     }
     
-    if (text.slice(i, i + 3) === "***") {
+    if (sourceText.slice(i, i + 3) === "***") {
       if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
       bold = !bold;
       italic = !italic;
       currentText = "";
       i += 3;
-    } else if (text.slice(i, i + 2) === "**") {
+    } else if (sourceText.slice(i, i + 2) === "**") {
       if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
       bold = !bold;
       currentText = "";
       i += 2;
-    } else if (text.slice(i, i + 2) === "__") {
+    } else if (sourceText.slice(i, i + 2) === "__") {
       if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
       underline = !underline;
       currentText = "";
       i += 2;
-    } else if (text.slice(i, i + 2) === "~~") {
+    } else if (sourceText.slice(i, i + 2) === "~~") {
       if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
       strikethrough = !strikethrough;
       currentText = "";
       i += 2;
-    } else if (text[i] === "*" && (i + 1 >= text.length || text[i + 1] !== "*")) {
+    } else if (sourceText[i] === "*" && (i + 1 >= sourceText.length || sourceText[i + 1] !== "*")) {
       if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
       italic = !italic;
       currentText = "";
       i++;
     } else {
-      currentText += text[i];
+      currentText += sourceText[i];
       i++;
     }
   }
 
   if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
+  if (headingSizeBonus > 0) {
+    const globalFontSize = getActiveFontSize(extension_settings[extensionName]);
+    return spans.map((span) => ({
+      ...span,
+      fontSize: (parseInt(span.fontSize, 10) || globalFontSize) + headingSizeBonus,
+    }));
+  }
   return spans;
 }
 
@@ -1824,7 +2276,7 @@ function wrappingTexts(text, mode = "word") {
   const ctx = canvas.getContext("2d");
   const { width, height } = getCanvasSize();
   const maxWidth = width - 80;
-  const fontSize = settings.fontSize;
+  const fontSize = getActiveFontSize(settings);
   const lineHeight = fontSize * parseFloat(settings.fontLineHeight);
 
   const fullSize = settings.imageRatio === "full";
@@ -1837,7 +2289,29 @@ function wrappingTexts(text, mode = "word") {
   const lines = text.split(/\n/);
 
   lines.forEach((lineText) => {
+    const trimmedLine = lineText.trim();
+    const isHrLine = /^-{3,}$/.test(trimmedLine) || /^<hr\s*\/?>$/i.test(trimmedLine);
+    const parsedLineText = lineText;
     const isBlank = lineText.trim() === "";
+
+    if (isHrLine) {
+      if (!fullSize && lineCount >= maxLines && currentPage.length > 0) {
+        pages.push(currentPage);
+        currentPage = [];
+        lineCount = 0;
+      }
+
+      if (mode === "word") {
+        currentPage.push([{text: "", isHr: true}]);
+      } else {
+        currentPage.push({
+          spans: [{text: "", isHr: true}],
+          softBreak: false,
+        });
+      }
+      lineCount++;
+      return;
+    }
 
     if (isBlank) {
       if (!fullSize && lineCount >= maxLines) {
@@ -1859,9 +2333,9 @@ function wrappingTexts(text, mode = "word") {
     }
 
     const wrapLine = [];
-    const spans = enableMarkdown(lineText);
+    const spans = enableMarkdown(parsedLineText);
+    const lineMaxWidth = maxWidth;
     let currentLine = [];
-    let currentLineText = "";
 
     spans.forEach((span) => {
       const units = mode === "word"
@@ -1895,7 +2369,7 @@ function wrappingTexts(text, mode = "word") {
         ctx.letterSpacing = `${settings.fontSpacing}em`;
         const unitWidth = ctx.measureText(unit).width;
         
-        if (currentLineWidth + unitWidth <= maxWidth) {
+        if (currentLineWidth + unitWidth <= lineMaxWidth) {
           currentLine.push({
             text: unit,
             bold: span.bold,
@@ -1999,7 +2473,7 @@ function generateTextImage(chunk, index) {
   const {width, height} = getCanvasSize();
   const settings = extension_settings[extensionName];
 
-  const fontSize = settings.fontSize;
+  const fontSize = getActiveFontSize(settings);
   const lineHeight = fontSize * parseFloat(settings.fontLineHeight);
   const bgImage = settings.selectedBackgroundImage;
   const useBgColor = settings.useBackgroundColor;
@@ -2111,9 +2585,46 @@ function generateTextImage(chunk, index) {
 
       return textWidth;
     }
+    function getAlignedX(totalTextWidth) {
+      if (setAlign === "center") return width / 2 - totalTextWidth / 2;
+      if (setAlign === "right") return width - totalTextWidth - 40;
+      return 40;
+    }
+    function isHrRenderLine(lineData) {
+      if (!lineData) return false;
+      if (Array.isArray(lineData)) {
+        return lineData.length === 1 && !!lineData[0]?.isHr;
+      }
+      return Array.isArray(lineData.spans) && lineData.spans.length === 1 && !!lineData.spans[0]?.isHr;
+    }
+    function renderHrLine(yPos) {
+      const startX = 40;
+      const endX = width - 40;
+      const centerY = yPos - lineHeight * 0.45;
+      const lineColor = settings.fontColor || "#000000";
+      const gradient = ctx.createLinearGradient(startX, centerY, endX, centerY);
+      gradient.addColorStop(0, "rgba(0,0,0,0)");
+      gradient.addColorStop(0.5, lineColor);
+      gradient.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.beginPath();
+      ctx.moveTo(startX, centerY);
+      ctx.lineTo(endX, centerY);
+      ctx.strokeStyle = gradient;
+      ctx.globalAlpha = 0.4;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
 
     if (lineBreak === "byWord") {
-      chunk.forEach((line) => {
+      for (let lineIndex = 0; lineIndex < chunk.length; lineIndex++) {
+        const line = chunk[lineIndex];
+        if (isHrRenderLine(line)) {
+          renderHrLine(y);
+          y += lineHeight;
+          continue;
+        }
+        const textY = y;
         let totalTextWidth = 0;
         const measuredWidths = [];
 
@@ -2125,29 +2636,31 @@ function generateTextImage(chunk, index) {
           totalTextWidth += width;
         });
 
-        let alignX = 40;
-        if (setAlign === "center") {
-          alignX = width / 2 - totalTextWidth / 2;
-        } else if (setAlign === "right") {
-          alignX = width - totalTextWidth - 40;
-        }
+        let alignX = getAlignedX(totalTextWidth);
 
         ctx.textAlign = "left";
         let x = alignX;
         line.forEach((span) => {
-          renderSpan(span, x, y, "background");
+          renderSpan(span, x, textY, "background");
           x += measuredWidths[line.indexOf(span)];
         });
         
         x = alignX;
         line.forEach((span, i) => {
-          x += renderSpan(span, x, y, "text");
+          x += renderSpan(span, x, textY, "text");
         });
 
         y += lineHeight;
-      });
+      }
     } else {
-      chunk.forEach((lineObj, index) => {
+      for (let index = 0; index < chunk.length; index++) {
+        const lineObj = chunk[index];
+        if (isHrRenderLine(lineObj)) {
+          renderHrLine(y);
+          y += lineHeight;
+          continue;
+        }
+        const textY = y;
         const line = lineObj.spans;
         const isLastLine = index === chunk.length - 1;
         const isBlankLine = line.every((span) => span.text.trim() === "");
@@ -2164,31 +2677,26 @@ function generateTextImage(chunk, index) {
           totalTextWidth += width;
         });
 
-        let alignX = 40;
-        if (setAlign === "center") {
-          alignX = width / 2 - totalTextWidth / 2;
-        } else if (setAlign === "right") {
-          alignX = width - totalTextWidth - 40;
-        }
+        let alignX = getAlignedX(totalTextWidth);
 
         const gapCount = line.length - 1;
         const spacing = gapCount > 0 && shouldJustify ? (maxLineWidth - totalTextWidth) / gapCount : 0;
 
         let x = alignX;
         line.forEach((span, i) => {
-          renderSpan(span, x, y, "background");
+          renderSpan(span, x, textY, "background");
           x += measuredWidths[i];
           if (i < line.length - 1) x += spacing;
         });
 
         x = alignX;
         line.forEach((span, i) => {
-          x += renderSpan(span, x, y, "text");
+          x += renderSpan(span, x, textY, "text");
           if (i < line.length - 1) x += spacing;
         });
 
         y += lineHeight;
-      });
+      }
     }
   };
 
@@ -2200,9 +2708,7 @@ function generateTextImage(chunk, index) {
       
       if (useSecondBgColor) {
         const gradient = ctx.createLinearGradient(0, 0, width, calcHeight);
-        gradient.addColorStop(0, bgColor);
-        gradient.addColorStop(0.4, bgColor);
-        gradient.addColorStop(1, secondBgColor);
+        addSmoothGradientStops(gradient, bgColor, secondBgColor);
         ctx.fillStyle = gradient;
       } else {
         ctx.fillStyle = bgColor;
@@ -2344,9 +2850,7 @@ function generateTextImage(chunk, index) {
   if (useBgColor && !bgImage) {
     if (useSecondBgColor) {
       const gradient = ctx.createLinearGradient(0, 0, width, calcHeight);
-      gradient.addColorStop(0, bgColor);
-      gradient.addColorStop(0.4, bgColor);
-      gradient.addColorStop(1, secondBgColor);
+      addSmoothGradientStops(gradient, bgColor, secondBgColor);
       ctx.fillStyle = gradient;
     } else {
       ctx.fillStyle = bgColor;
@@ -2383,6 +2887,413 @@ function generateTextImage(chunk, index) {
   if (settings.imageRatio === "rectangular") $img.addClass("rectangular");
   if (isFullSize) $img.addClass("full");
   $preview.append($img, $downloadBtn);
+  return $preview;
+}
+function escapeHTML(text = "") {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+function escapeCSSURL(url = "") {
+  return String(url).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+function toRGBA(hex, alpha = 1) {
+  const fallback = `rgba(255,255,255,${alpha})`;
+  if (!hex || typeof hex !== "string") return fallback;
+
+  const cleanHex = hex.replace("#", "").trim();
+  if (![3, 6].includes(cleanHex.length)) return fallback;
+
+  const fullHex = cleanHex.length === 3
+    ? cleanHex.split("").map((ch) => ch + ch).join("")
+    : cleanHex;
+
+  const r = parseInt(fullHex.slice(0, 2), 16);
+  const g = parseInt(fullHex.slice(2, 4), 16);
+  const b = parseInt(fullHex.slice(4, 6), 16);
+
+  if ([r, g, b].some(Number.isNaN)) return fallback;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+function normalizeHexColor(color = "#000000") {
+  const normalized = String(color || "").trim().toLowerCase();
+  if (!normalized) return null;
+  let hex = normalized.startsWith("#") ? normalized.slice(1) : normalized;
+  if (hex.length === 3) {
+    hex = hex.split("").map((ch) => ch + ch).join("");
+  }
+  if (!/^[0-9a-f]{6}$/.test(hex)) return null;
+  return `#${hex}`;
+}
+function mixHexColors(colorA, colorB, ratio = 0.5) {
+  const a = normalizeHexColor(colorA);
+  const b = normalizeHexColor(colorB);
+  if (!a || !b) return a || b || "#000000";
+
+  const clampRatio = Math.max(0, Math.min(1, Number(ratio)));
+  const ar = parseInt(a.slice(1, 3), 16);
+  const ag = parseInt(a.slice(3, 5), 16);
+  const ab = parseInt(a.slice(5, 7), 16);
+  const br = parseInt(b.slice(1, 3), 16);
+  const bg = parseInt(b.slice(3, 5), 16);
+  const bb = parseInt(b.slice(5, 7), 16);
+
+  const r = Math.round(ar + (br - ar) * clampRatio);
+  const g = Math.round(ag + (bg - ag) * clampRatio);
+  const bl = Math.round(ab + (bb - ab) * clampRatio);
+  const toHex = (n) => n.toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(bl)}`;
+}
+function buildSmoothGradientCSS(colorA, colorB, angle = "135deg") {
+  const c1 = normalizeHexColor(colorA) || colorA;
+  const c2 = normalizeHexColor(colorB) || colorB;
+  const c25 = mixHexColors(c1, c2, 0.25);
+  const c50 = mixHexColors(c1, c2, 0.5);
+  const c75 = mixHexColors(c1, c2, 0.75);
+  return `linear-gradient(${angle}, ${c1} 0%, ${c25} 35%, ${c50} 60%, ${c75} 80%, ${c2} 100%)`;
+}
+function addSmoothGradientStops(gradient, colorA, colorB) {
+  const c1 = normalizeHexColor(colorA) || colorA;
+  const c2 = normalizeHexColor(colorB) || colorB;
+  gradient.addColorStop(0, c1);
+  gradient.addColorStop(0.35, mixHexColors(c1, c2, 0.25));
+  gradient.addColorStop(0.6, mixHexColors(c1, c2, 0.5));
+  gradient.addColorStop(0.8, mixHexColors(c1, c2, 0.75));
+  gradient.addColorStop(1, c2);
+}
+function mapHtmlStrokeWidth(value) {
+  const numeric = parseFloat(value) || 0;
+  if (numeric === 0.8) return 0.1;
+  if (numeric === 1.5) return 0.3;
+  return numeric;
+}
+function getSpanColor(span, settings) {
+  let textColor = span.isBlockquote
+    ? (settings.blockquoteFontColor || defaultSettings.blockquoteFontColor)
+    : (settings.fontColor || "#000000");
+  if (span.fontColor) {
+    textColor = span.fontColor;
+  } else {
+    if (span.strikethrough && settings.useStrikethroughColor) {
+      textColor = settings.strikethroughFontColor || textColor;
+    } else if (span.underline && settings.useUnderlineColor) {
+      textColor = settings.underlineFontColor || textColor;
+    } else if (span.bold && span.italic && settings.useBoldItalicColor) {
+      textColor = settings.boldItalicFontColor || textColor;
+    } else if (span.bold && !span.italic && settings.useBoldColor) {
+      textColor = settings.boldFontColor || textColor;
+    } else if (!span.bold && span.italic && settings.useItalicColor) {
+      textColor = settings.italicFontColor || textColor;
+    }
+  }
+  return textColor;
+}
+function getSpanStrokeWidth(span, settings) {
+  if (span.strokeWidth !== undefined && span.strokeWidth !== null) {
+    if (span.strokeWidth === "inherit") {
+      return mapHtmlStrokeWidth(settings.strokeWidth);
+    }
+    return mapHtmlStrokeWidth(span.strokeWidth);
+  }
+  return mapHtmlStrokeWidth(settings.strokeWidth);
+}
+function buildSpanStyle(span, settings) {
+  const style = [];
+  const decorations = [];
+  const strokeWidth = getSpanStrokeWidth(span, settings);
+  const textColor = getSpanColor(span, settings);
+
+  style.push(`color:${textColor} !important`);
+  style.push("line-height:inherit !important");
+  style.push("letter-spacing:inherit !important");
+  style.push("font-size:inherit !important");
+  if (span.bold) style.push("font-weight:700 !important");
+  if (span.italic) style.push("font-style:italic !important");
+  if (span.underline) decorations.push("underline");
+  if (span.strikethrough) decorations.push("line-through");
+  if (decorations.length) {
+    style.push(`text-decoration:${decorations.join(" ")} !important`);
+  }
+  if (span.bgColor) {
+    style.push(`background-color:${span.bgColor} !important`);
+  }
+  if (span.fontSize) {
+    style.push(`font-size:${span.fontSize}px !important`);
+  }
+  if (strokeWidth > 0) {
+    style.push(`-webkit-text-stroke:${strokeWidth}px ${textColor} !important`);
+  }
+  return style.join("; ");
+}
+function renderMarkdownHTML(text, settings) {
+  const lines = String(text || "").split(/\n/);
+  const htmlFontFace = getHtmlFontFace(settings);
+  const renderLineHTML = (lineText, isBlockquoteLine = false) => {
+    let spans = enableMarkdown(lineText);
+    if (isBlockquoteLine) {
+      spans = spans.map((span) => ({...span, isBlockquote: true}));
+    }
+    if (!spans.length) return `<font face="${htmlFontFace}"></font>`;
+
+    const lineHtml = spans.map((span) => {
+      const spanText = escapeHTML(span.text || "");
+      const spanStyle = buildSpanStyle(span, settings);
+      if (!spanStyle) return spanText;
+      return `<span style="${spanStyle}">${spanText}</span>`;
+    }).join("");
+    return `<font face="${htmlFontFace}">${lineHtml}</font>`;
+  };
+
+  const htmlLines = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
+
+    if (/^-{3,}$/.test(trimmedLine) || /^<hr\s*\/?>$/i.test(trimmedLine)) {
+      htmlLines.push(`<hr style="display: block !important; opacity: 0.4 !important; border:0 !important;height:1px !important;background-image:linear-gradient(90deg, transparent, ${settings.fontColor || "#000000"}, transparent) !important;margin:28px auto calc(28px - 1rem) !important;" />`);
+      continue;
+    }
+
+    const quoteMatch = line.match(/^\s*>\s?(.*)$/);
+    if (quoteMatch) {
+      const quoteLines = [];
+      let j = i;
+      while (j < lines.length) {
+        const m = lines[j].match(/^\s*>\s?(.*)$/);
+        if (!m) break;
+        quoteLines.push(m[1] ?? "");
+        j++;
+      }
+      const fontColor = settings.blockquoteFontColor || defaultSettings.blockquoteFontColor;
+      const borderColor = settings.blockquoteBorderColor || defaultSettings.blockquoteBorderColor;
+      const bgColor = toRGBA(settings.blockquoteBgColor || defaultSettings.blockquoteBgColor, 0.3);
+      const quoteHTML = quoteLines
+        .map((quoteLine) => `<div style="margin:0 !important;">${renderLineHTML(quoteLine, true)}</div>`)
+        .join("");
+      htmlLines.push(`<div class="blockquote" style="width:auto !important;color:${fontColor} !important;border-radius:5px !important;border-left:5px solid ${borderColor} !important;padding:8px !important;background:${bgColor} !important;-webkit-backdrop-filter:blur(10px) !important;backdrop-filter:blur(10px) !important;margin:8px 0 !important;"><div style="display:flex !important;flex-direction:column !important;gap:0 !important;margin:0 !important;">${quoteHTML}</div></div>`);
+      i = j - 1;
+      continue;
+    }
+    htmlLines.push(renderLineHTML(line));
+  }
+
+  return htmlLines.join("\n");
+}
+function createHTMLSnippet(text, index) {
+  const settings = extension_settings[extensionName];
+  const htmlSelectedBackground = settings.selectedBackgroundImageHtml || settings.selectedBackgroundImage;
+  const bgURL = resolveBackgroundURLForHTML(htmlSelectedBackground);
+  const markdownHTML = renderMarkdownHTML(text, settings);
+  const switcherTexts = getHtmlSwitcherTexts();
+  const switcherRenderedHTML = switcherTexts.map((itemText) => renderMarkdownHTML(itemText, settings));
+  const switcherUid = `tti-switch-${index}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1679616).toString(36)}`;
+  const switcherBaseId = `${switcherUid}-base`;
+
+  const backgroundColor = settings.backgroundColor || "#ffffff";
+  const secondColor = settings.secondBackgroundColor || backgroundColor;
+  const smoothGradient = buildSmoothGradientCSS(backgroundColor, secondColor);
+  const useBgColor = !!settings.useBackgroundColor;
+  const useSecondBgColor = !!settings.useSecondBackgroundColor;
+  const escapedURL = bgURL ? escapeCSSURL(bgURL) : "";
+  const colorBackground = useBgColor
+    ? (useSecondBgColor
+      ? smoothGradient
+      : backgroundColor)
+    : "transparent";
+  const colorBackgroundImage = useBgColor
+    ? (useSecondBgColor
+      ? smoothGradient
+      : `linear-gradient(${backgroundColor}, ${backgroundColor})`)
+    : "none";
+  const bgLayerImage = escapedURL ? (useBgColor ? `${colorBackgroundImage}, url('${escapedURL}')` : `url('${escapedURL}')`) : "none";
+
+  const filterEffects = [];
+  filterEffects.push(`brightness(${settings.bgBrightness ?? 100}%)`);
+  filterEffects.push(`hue-rotate(${settings.bgHue ?? 0}deg)`);
+  if (settings.bgGrayscale > 0) filterEffects.push(`grayscale(${settings.bgGrayscale}%)`);
+  const bgFilter = filterEffects.join(" ");
+
+  const overlayOpacity = Math.min(1, Math.max(0, Number(settings.overlayOpacity) || 0));
+  const blurStrength = Math.max(0, Number(settings.bgBlur) || 0);
+  const lineBreakByChar = (settings.lineBreak || "byWord") === "byChar";
+  const globalStrokeWidth = mapHtmlStrokeWidth(settings.strokeWidth);
+  const globalTextColor = settings.fontColor || "#000000";
+  const htmlFontSize = parseInt(settings.fontSizeHtml, 10) || defaultSettings.fontSizeHtml;
+  const footerLayoutMode = getFooterLayoutMode(settings);
+  const footerWidthPx = parsePositiveInt(settings.footerWidth, defaultSettings.footerWidth);
+  const footerHeightPx = parsePositiveInt(settings.footerHeight, defaultSettings.footerHeight);
+  const rawFooterText = String(settings.footerText || "").trim();
+  const hasFooter = rawFooterText.length > 0;
+  const isScrollFooterLayout = footerLayoutMode === "scroll";
+  const contentMaxHeightValue = isScrollFooterLayout
+    ? (hasFooter ? `calc(${footerHeightPx}px - 100px)` : `calc(${footerHeightPx}px - 64px)`)
+    : "none";
+  const containerInlineStyle = [
+    "background:transparent !important",
+    "box-sizing:border-box !important",
+    "width:100% !important",
+    `max-width:${footerWidthPx}px !important`,
+    isScrollFooterLayout ? `max-height:${footerHeightPx}px !important` : "max-height:none !important",
+    "margin:0 auto !important",
+    "padding:32px !important",
+    "border-radius:15px !important",
+    "overflow:hidden !important",
+    "isolation:isolate !important",
+  ].join(";");
+  const bgInlineStyle = [
+    "border-radius:15px !important",
+    `background:${useBgColor ? colorBackground : "transparent"} !important`,
+    `background-image:${bgLayerImage} !important`,
+    "background-size:cover !important",
+    "background-position:center !important",
+    "background-repeat:no-repeat !important",
+    `filter:${bgFilter || "none"} !important`,
+  ].join(";");
+  const overlayInlineStyle = [
+    "border-radius:15px !important",
+    `background:${toRGBA(settings.overlayColor || "#ffffff", overlayOpacity)} !important`,
+    `-webkit-backdrop-filter:blur(${blurStrength}px) !important`,
+    `backdrop-filter:blur(${blurStrength}px) !important`,
+    "pointer-events:none !important",
+  ].join(";");
+  const switcherDotsWrapStyle = [
+    "display:flex !important",
+    "justify-content:flex-end !important",
+    "margin:6px 10px 0 0 !important",
+    "gap:6px !important",
+    "z-index:1 !important",
+    "pointer-events:auto !important",
+  ].join(";");
+  const switcherDotStyle = [
+    "display:block !important",
+    "width:15px !important",
+    "height:10px !important",
+    "border-radius:999px !important",
+    "background:rgba(255,255,255,0.55) !important",
+    "border:1px solid rgba(0,0,0,0.18) !important",
+    "cursor:pointer !important",
+    "transition:transform .15s ease, background-color .15s ease !important",
+  ].join(";");
+  const contentInlineStyle = [
+    `max-height:${contentMaxHeightValue} !important`,
+    `overflow-y:${isScrollFooterLayout ? "auto" : "visible"} !important`,
+    `color:${globalTextColor} !important`,
+    `font-size:${htmlFontSize}px !important`,
+    "font-weight:400 !important",
+    `letter-spacing:${settings.fontSpacing || 0}em !important`,
+    `line-height:${settings.fontLineHeight || 1.5} !important`,
+    `text-align:${settings.fontAlign || "left"} !important`,
+    "white-space:pre-wrap !important",
+    `word-break:${lineBreakByChar ? "break-all" : "break-word"} !important`,
+    "overflow-wrap:anywhere !important",
+    `margin-bottom:${hasFooter ? 44 : 0}px !important`,
+    `-webkit-text-stroke:${globalStrokeWidth}px ${globalTextColor} !important`,
+  ].join(";");
+  const footerInlineStyle = [
+    "display:flex !important",
+    "flex-wrap:wrap !important",
+    "justify-content:flex-end !important",
+    "gap:6px !important",
+    "right:35px !important",
+    "bottom:35px !important",
+    "font-size:12px !important",
+    "text-align:right !important",
+  ].join(";");
+  const footerItemStyle = [
+    "display:inline-block !important",
+    "padding:2px 8px !important",
+    "border-radius:999px !important",
+    `color:${settings.footerColor || "#000000"} !important`,
+    `background:${toRGBA(settings.footerBgColor || "#ffffff", 0.2)} !important`,
+    "line-height:1.4 !important",
+  ].join(";");
+  const footerTokens = rawFooterText
+    ? rawFooterText.split(",").map((token) => token.trim()).filter(Boolean)
+    : [];
+  const htmlFontFace = getHtmlFontFace(settings);
+  const footerItemsHTML = footerTokens.length
+    ? footerTokens.map((token) => `<span style="${footerItemStyle}"><font face="${htmlFontFace}">${escapeHTML(token)}</font></span>`).join("")
+    : (rawFooterText
+      ? `<span style="${footerItemStyle}"><font face="${htmlFontFace}">${escapeHTML(rawFooterText)}</font></span>`
+      : "");
+  const footerHTML = hasFooter
+    ? `
+  <div class="tti-footer" style="${footerInlineStyle}">${footerItemsHTML}</div>`
+    : "";
+  const shouldRenderBg = escapedURL || useBgColor;
+  const backgroundHTML = shouldRenderBg
+    ? `
+  <div class="tti-bg" style="${bgInlineStyle}"></div>`
+    : "";
+  const hasSwitcher = switcherRenderedHTML.length > 0;
+  const switcherItems = switcherRenderedHTML.map((html, itemIndex) => ({
+    id: `${switcherUid}-${itemIndex}`,
+    panelClass: `tti-panel-${itemIndex}`,
+    html,
+    itemIndex,
+  }));
+  const switcherRadiosHTML = hasSwitcher
+    ? `
+  <input type="radio" class="tti-switch-input" name="${switcherUid}" id="${switcherBaseId}" checked>
+${switcherItems.map((item) => `  <input type="radio" class="tti-switch-input" name="${switcherUid}" id="${item.id}">`).join("\n")}`
+    : "";
+  const switcherDotsHTML = hasSwitcher
+    ? `<div class="tti-switcher-dots" style="${switcherDotsWrapStyle}"><label style="${switcherDotStyle}" title="기본 텍스트" for="${switcherBaseId}"></label>${switcherItems.map((item) => `<label style="${switcherDotStyle}" title="텍스트 ${item.itemIndex + 1}" for="${item.id}"></label>`).join("")}</div>`
+    : "";
+  const overlayHTML = `
+  <div class="tti-overlay" style="${overlayInlineStyle}">${switcherDotsHTML}</div>`;
+  const contentHTML = hasSwitcher
+    ? `
+  <div class="tti-panels" style="margin-top: 10px;">
+    <div class="tti-content tti-panel tti-panel-base" style="${contentInlineStyle}">${markdownHTML}</div>
+${switcherItems.map((item) => `    <div class="tti-content tti-panel ${item.panelClass}" style="${contentInlineStyle}">${item.html}</div>`).join("\n")}
+  </div>`
+    : `
+  <div class="tti-content" style="${contentInlineStyle}">${markdownHTML}</div>`;
+  const switcherRuleStyle = hasSwitcher
+    ? [
+      `.tti-switch-input{position:absolute !important;opacity:0 !important;pointer-events:none !important;}`,
+      `.tti-panels{position:relative !important;z-index:3 !important;}`,
+      `.tti-panel{display:none !important;}`,
+      `#${switcherBaseId}:checked ~ .tti-panels .tti-panel-base{display:block !important;}`,
+      `#${switcherBaseId}:checked ~ .tti-overlay .tti-switcher-dots label[for="${switcherBaseId}"]{background:rgba(255,255,255,0.95) !important;transform:scale(1.12) !important;}`,
+      ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-panels .${item.panelClass}{display:block !important;}`),
+      ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-overlay .tti-switcher-dots label[for="${item.id}"]{background:rgba(255,255,255,0.95) !important;transform:scale(1.12) !important;}`),
+    ].join("")
+    : "";
+  const scopedStyle = `.tti{position:relative !important;}.tti-bg{position:absolute !important;inset:0 !important;z-index:0 !important;}.tti-overlay{position:absolute !important;inset:16px !important;z-index:2 !important;}.tti-content{position:relative !important;z-index:3 !important;}.tti-footer{position:absolute !important;z-index:4 !important;}${switcherRuleStyle}`;
+
+  return `<div>
+<style>${scopedStyle}</style>
+<div class="tti" style="${containerInlineStyle}">
+${backgroundHTML}${switcherRadiosHTML}${overlayHTML}
+${contentHTML}${footerHTML}
+</div>
+</div>`;
+}
+function generateHTMLPreview(text, index) {
+  const htmlCode = createHTMLSnippet(text, index);
+  const previewFontFamily = getHtmlPreviewFontFamily();
+  const previewOnlyStyle = `<style>.html-render-preview .tti-content,.html-render-preview .tti-content span[style],.html-render-preview .tti-footer,.html-render-preview .tti-footer *{font-family:${previewFontFamily} !important;}</style>`;
+
+  const $preview = $("<div>").addClass("image-preview-item html-preview-item");
+  const $rendered = $("<div>")
+    .addClass("html-render-preview")
+    .html(htmlCode + previewOnlyStyle);
+  const $copyBtn = $("<button>")
+    .addClass("download-btn")
+    .text("코드 복사")
+    .on("click", async () => {
+      const copied = await copyToClipboard(htmlCode);
+      if (!copied) {
+        alert("코드 복사에 실패했습니다.");
+      }
+    });
+
+  $preview.append($rendered, $copyBtn);
   return $preview;
 }
 
@@ -2466,51 +3377,414 @@ function saveImage(dataUrl, filename) {
   link.download = `${dateString} (${index}).png`;
   link.click();
 }
+async function copyToClipboard(content) {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(content);
+      return true;
+    } catch (error) {
+      console.warn("[text-to-image-converter] clipboard write failed", error);
+    }
+  }
+
+  const temp = document.createElement("textarea");
+  temp.value = content;
+  temp.style.position = "fixed";
+  temp.style.opacity = "0";
+  temp.style.pointerEvents = "none";
+  document.body.appendChild(temp);
+  temp.focus();
+  temp.select();
+  const copied = document.execCommand("copy");
+  document.body.removeChild(temp);
+  return copied;
+}
 
 // 추가 다운로드 버튼
 function setupImageConvertButton() {
+  if (isImageConvertButtonSetup) return;
+  isImageConvertButtonSetup = true;
+
   let selectedText = "";
+  let liveSelectedText = "";
+  let rememberedSelections = [];
   let selectedMesBlock = null;
   let timeout;
   let clearSelectionTimeout;
+  let $selectionFloat = null;
+  let menuOpened = false;
+  let lastSelectionPoint = {x: 0, y: 0};
+  let selectionPositionFrame = null;
+
+  function buildCombinedSelectedText() {
+    if (rememberedSelections.length && liveSelectedText) {
+      return `${rememberedSelections.join("\n\n")}\n\n${liveSelectedText}`;
+    }
+    if (rememberedSelections.length) {
+      return rememberedSelections.join("\n\n");
+    }
+    return liveSelectedText;
+  }
+
+  function syncSelectedTextState() {
+    selectedText = buildCombinedSelectedText();
+  }
+
+  function hasRememberedSelection() {
+    return rememberedSelections.length > 0;
+  }
+  function getSelectionMesBlock(selection) {
+    const anchorNode = selection?.anchorNode;
+    if (!anchorNode) return $();
+    return $(anchorNode).closest("#chat .mes");
+  }
+  function isSelectionInsideChat(selection) {
+    return getSelectionMesBlock(selection).length > 0;
+  }
 
   function allClearSelection() {
     clearTimeout(clearSelectionTimeout);
     selectedText = "";
+    liveSelectedText = "";
+    rememberedSelections = [];
     selectedMesBlock = null;
+    hideSelectionFloat();
   }
 
   function startClearSelectionTimer() {
     clearTimeout(clearSelectionTimeout);
     clearSelectionTimeout = setTimeout(() => {
+      const selection = window.getSelection();
+      if (selection && selection.toString().trim() && isSelectionInsideChat(selection)) {
+        startClearSelectionTimer();
+        return;
+      }
       allClearSelection();
-    }, 15000);
+    }, 20000);
   }
 
-  function updateSelection() {
-    const selection = window.getSelection();
-    const selectedString = selection.toString().trim();
-    if (selectedString) {
-      selectedText = selectedString;
-      selectedMesBlock = $(selection.anchorNode).closest(".mes");
-    }
+  function ensureSelectionFloat() {
+    if ($selectionFloat) return;
+
+    $selectionFloat = $("<div>")
+      .addClass("tti-selection-float")
+      .append(
+        $("<button>")
+          .addClass("tti-selection-append fa-solid fa-forward")
+          .attr({
+            type: "button",
+            title: "이어서 선택",
+            "data-i18n": "[title]이어서 선택",
+          })
+          .on("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!liveSelectedText) return;
+            rememberedSelections.push(liveSelectedText);
+            liveSelectedText = "";
+            syncSelectedTextState();
+            startClearSelectionTimer();
+            window.getSelection().removeAllRanges();
+            hideSelectionFloat();
+          }),
+        $("<button>")
+          .addClass("tti-selection-toggle fa-solid fa-camera-retro")
+          .attr({
+            type: "button",
+            title: "발췌하기",
+            "data-i18n": "[title]발췌하기",
+          })
+          .on("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!selectedText) return;
+            menuOpened ? closeSelectionMenu() : openSelectionMenu();
+          }),
+        $("<div>").addClass("tti-selection-menu")
+      );
+
+    $("body").append($selectionFloat);
   }
-  $(document).on("selectionchange", function () {
+
+  function renderMainMenu() {
+    ensureSelectionFloat();
+    const $menu = $selectionFloat.find(".tti-selection-menu").empty();
+    $menu.append(
+      $("<button>")
+        .addClass("tti-selection-action")
+        .attr("type", "button")
+        .text("이미지 발췌")
+        .on("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          renderPresetMenu(false, "이미지 프리셋");
+        }),
+      $("<button>")
+        .addClass("tti-selection-action")
+        .attr("type", "button")
+        .text("코드 발췌")
+        .on("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          renderPresetMenu(true, "코드 프리셋");
+        }),
+      $("<button>")
+        .addClass("tti-selection-action")
+        .attr("type", "button")
+        .text("즉시 발췌")
+        .on("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const currentPreset = $("#preset_selector").val();
+          if (!currentPreset || currentPreset === "nonePreset") {
+            toastr.warning("선택된 프리셋이 없습니다.");
+            return;
+          }
+          if (!selectedText) return;
+          closeSelectionMenu();
+          setExtractText(selectedText);
+          allClearSelection();
+          window.getSelection().removeAllRanges();
+        })
+    );
+  }
+
+  function openSelectionMenu() {
+    ensureSelectionFloat();
+    renderMainMenu();
+    menuOpened = true;
+    $selectionFloat.addClass("menu-open");
+    keepSelectionFloatInViewport();
+    requestAnimationFrame(() => {
+      keepSelectionFloatInViewport();
+    });
+    setTimeout(() => {
+      keepSelectionFloatInViewport();
+    }, 0);
+  }
+
+  function closeSelectionMenu() {
+    if (!$selectionFloat) return;
+    menuOpened = false;
+    $selectionFloat.removeClass("menu-open");
+    $selectionFloat.find(".tti-selection-menu").empty();
+    keepSelectionFloatInViewport();
+  }
+
+  function hideSelectionFloat() {
+    if (!$selectionFloat) return;
+    closeSelectionMenu();
+    $selectionFloat.removeClass("is-visible");
+  }
+
+  function showSelectionFloatAt(x, y, position = "default") {
+    ensureSelectionFloat();
+    let nextLeft = x;
+    let nextTop = y;
+
+    if (position === "bottom-center") {
+      const floatRect = $selectionFloat[0].getBoundingClientRect();
+      nextLeft = x - floatRect.width / 2;
+      nextTop = y + 16;
+    }
+
+    lastSelectionPoint = {x: nextLeft, y: nextTop};
+    $selectionFloat.css({left: `${nextLeft}px`, top: `${nextTop}px`}).addClass("is-visible");
+    keepSelectionFloatInViewport();
+  }
+
+  function getSelectionBoundingRect(selection) {
+    if (!selection || !selection.rangeCount) return null;
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    if (!rect || (!rect.width && !rect.height)) return null;
+    return rect;
+  }
+
+  function showSelectionFloatAtSelectionBottomCenter(selection) {
+    const selectionRect = getSelectionBoundingRect(selection);
+    if (!selectionRect) return;
+    showSelectionFloatAt(selectionRect.left + selectionRect.width / 2, selectionRect.bottom, "bottom-center");
+  }
+
+  function updateSelectionFloatPositionFromSelection() {
+    if (!liveSelectedText) return;
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+    const selectedString = selection.toString().trim();
+    if (!selectedString) return;
+    showSelectionFloatAtSelectionBottomCenter(selection);
+  }
+
+  function scheduleSelectionFloatPositionUpdate() {
+    if ((!$selectionFloat || !$selectionFloat.hasClass("is-visible")) && !liveSelectedText) {
+      return;
+    }
+    if (selectionPositionFrame !== null) return;
+    selectionPositionFrame = requestAnimationFrame(() => {
+      selectionPositionFrame = null;
+      updateSelectionFloatPositionFromSelection();
+      keepSelectionFloatInViewport();
+    });
+  }
+
+  function keepSelectionFloatInViewport() {
+    if (!$selectionFloat || !$selectionFloat.hasClass("is-visible")) return;
+
+    const margin = 10;
+    const element = $selectionFloat[0];
+    const rect = element.getBoundingClientRect();
+    let left = parseFloat($selectionFloat.css("left")) || lastSelectionPoint.x;
+    let top = parseFloat($selectionFloat.css("top")) || lastSelectionPoint.y;
+
+    if (rect.right > window.innerWidth - margin) {
+      left -= rect.right - (window.innerWidth - margin);
+    }
+    if (rect.left < margin) {
+      left += margin - rect.left;
+    }
+    if (rect.bottom > window.innerHeight - margin) {
+      top -= rect.bottom - (window.innerHeight - margin);
+    }
+    if (rect.top < margin) {
+      top += margin - rect.top;
+    }
+
+    $selectionFloat.css({left: `${Math.round(left)}px`, top: `${Math.round(top)}px`});
+  }
+
+  function getPresetNamesByMode(isHtmlMode) {
+    const presets = extension_settings[extensionName].presets || {};
+    return Object.keys(presets)
+      .filter((name) => !!presets[name]?.htmlMode === isHtmlMode)
+      .sort();
+  }
+
+  function applyPresetFromMenu(presetName) {
+    const $selector = $("#preset_selector");
+    $selector.val(presetName).trigger("change");
+  }
+
+  function restorePresetAfterSelection(originalPresetName) {
+    const fallbackPreset = originalPresetName || "nonePreset";
+    const $selector = $("#preset_selector");
+    if ($selector.val() === fallbackPreset) return;
+    $selector.val(fallbackPreset).trigger("change");
+  }
+
+  function renderPresetMenu(isHtmlMode, title) {
+    ensureSelectionFloat();
+    const presetNames = getPresetNamesByMode(isHtmlMode);
+    const $menu = $selectionFloat.find(".tti-selection-menu").empty();
+
+    const $header = $("<div>")
+      .addClass("tti-selection-submenu-header")
+      .append(
+        $("<span>").text(title),
+        $("<button>")
+          .attr("type", "button")
+          .text("뒤로")
+          .on("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            renderMainMenu();
+            keepSelectionFloatInViewport();
+          })
+      );
+
+    $menu.append($header);
+
+    if (presetNames.length === 0) {
+      $menu.append($("<div>").addClass("tti-selection-empty").text("사용 가능한 프리셋이 없습니다."));
+      keepSelectionFloatInViewport();
+      return;
+    }
+
+    presetNames.forEach((presetName) => {
+      $menu.append(
+        $("<button>")
+          .addClass("tti-selection-preset")
+          .attr("type", "button")
+          .text(presetName)
+          .on("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!selectedText) return;
+            const originalPresetName = $("#preset_selector").val() || "nonePreset";
+            const shouldRestorePreset = originalPresetName !== presetName;
+            applyPresetFromMenu(presetName);
+            closeSelectionMenu();
+            setExtractText(selectedText, {
+              onComplete: () => {
+                if (shouldRestorePreset) {
+                  restorePresetAfterSelection(originalPresetName);
+                }
+              },
+            });
+            allClearSelection();
+            window.getSelection().removeAllRanges();
+          })
+      );
+    });
+
+    keepSelectionFloatInViewport();
+  }
+
+  function handleSelectionChange() {
     clearTimeout(timeout);
     timeout = setTimeout(() => {
       const selection = window.getSelection();
+      if (!selection) return;
       const selectedString = selection.toString().trim();
 
       if (selectedString) {
-        selectedText = selectedString;
-        selectedMesBlock = $(selection.anchorNode).closest(".mes");
+        const $mes = getSelectionMesBlock(selection);
+        if (!$mes.length) {
+          if (selectedText || hasRememberedSelection()) {
+            startClearSelectionTimer();
+          }
+          return;
+        }
+
+        liveSelectedText = selectedString;
+        syncSelectedTextState();
+        selectedMesBlock = $mes;
+        showSelectionFloatAtSelectionBottomCenter(selection);
         startClearSelectionTimer();
+      } else {
+        liveSelectedText = "";
+        syncSelectedTextState();
+        if (hasRememberedSelection() || selectedText) {
+          startClearSelectionTimer();
+        }
+        hideSelectionFloat();
       }
-    }, 100);
+    }, 20);
+  }
+
+  $(document).on("selectionchange", function () {
+    handleSelectionChange();
+  });
+  $(document).on("touchend pointerup", function () {
+    handleSelectionChange();
+    scheduleSelectionFloatPositionUpdate();
   });
   $(document).on("click", "#image_preview_container .download-btn", function () {
     allClearSelection();
   });
+  $(document).on("mousedown touchstart", function (e) {
+    if (!$selectionFloat || !$selectionFloat.hasClass("is-visible")) return;
+    if ($(e.target).closest(".tti-selection-float").length) return;
+    liveSelectedText = "";
+    selectedText = "";
+    selectedMesBlock = null;
+    hideSelectionFloat();
+  });
+  $(window).on("resize", scheduleSelectionFloatPositionUpdate);
+  window.addEventListener("scroll", scheduleSelectionFloatPositionUpdate, true);
+  window.addEventListener("wheel", scheduleSelectionFloatPositionUpdate, {passive: true});
+  window.addEventListener("touchmove", scheduleSelectionFloatPositionUpdate, {passive: true});
+
   function createImageConvertButton($mesBlock) {
     const $button = $("<div>")
       .addClass("mes_button mes_to_image fa-solid fa-camera-retro interactable")
@@ -2549,7 +3823,8 @@ function setupImageConvertButton() {
   });
   observer.observe($("#chat")[0], {childList: true, subtree: true});
 }
-function setExtractText(text) {
+function setExtractText(text, options = {}) {
+  const onComplete = typeof options.onComplete === "function" ? options.onComplete : null;
   $("#text_to_image").val(text);
 
   if (currentCustomFont) {
@@ -2579,7 +3854,20 @@ function setExtractText(text) {
   }
 
   refreshPreview();
+  if (isHtmlModeEnabled()) {
+    const htmlCode = createHTMLSnippet($("#text_to_image").val() || "", 0);
+    Promise.resolve(copyToClipboard(htmlCode)).finally(() => {
+      if (onComplete) onComplete();
+    });
+    toastr.success("코드 복사 완료!");
+    return;
+  }
   autoDownload("#image_preview_container .download-btn", 1500);
+  if (onComplete) {
+    setTimeout(() => {
+      onComplete();
+    }, 2600);
+  }
 }
 
 jQuery(async () => {
@@ -2591,7 +3879,9 @@ jQuery(async () => {
   customBG();
   setupWordReplacer();
   setupImageConvertButton();
+  setupHtmlSwitcherInputs();
   bindingFunctions();
+  setupRangeValueTooltips();
   restoreButtons();
   tabButtons();
   botCardButtons();
@@ -2600,7 +3890,9 @@ jQuery(async () => {
 
 function bindingFunctions() {
   $("#tti_font_family").on("change", fontFamily);
-  $("#tti_font_size").on("change", fontSize);
+  $("#tti_font_size_image").on("change", fontSizeImage);
+  $("#tti_font_size_html").on("change", fontSizeHtml);
+  $("#tti_html_font_face").on("change", htmlFontFace);
   $("#tti_letter_spacing").on("change", fontSpacing);
   $("#tti_line_height").on("change", fontLineHeight);
   $("#tti_font_align").on("change", fontAlign);
@@ -2615,6 +3907,9 @@ function bindingFunctions() {
   $("#tti_strikethrough_font_color").on("change", strikethroughFontColor);
   $("#use_underline_color").on("change", useUnderlineColor);
   $("#tti_underline_font_color").on("change", underlineFontColor);
+  $("#tti_blockquote_font_color").on("change", blockquoteFontColor);
+  $("#tti_blockquote_bg_color").on("change", blockquoteBgColor);
+  $("#tti_blockquote_border_color").on("change", blockquoteBorderColor);
   $("#tti_stroke_width").on("change", strokeWidth);
   $("#tti_line_break").on("change", lineBreak);
   $("#tti_ratio").on("change", aspectRatio);
@@ -2631,11 +3926,16 @@ function bindingFunctions() {
   $("#bg_noise").on("change", addNoise);
   $("#overlay_color").on("change", overlayColor);
   $("#overlay_opacity").on("change", addOverlay);
+  $("#footer_layout_mode").on("change", footerLayoutMode);
+  $("#footer_width").on("change", footerWidth);
+  $("#footer_height").on("change", footerHeight);
   $("#footer_text").on("change", footerText);
   $("#footer_color").on("change", footerColor);
+  $("#footer_bg_color").on("change", footerBgColor);
   $("#upload-local-font").on("click", addLocalFont);
   $("#delete-local-font").on("click", deleteLocalFont);
   $("#preview_toggle").on("change", autoPreview);
+  $("#html_toggle").on("change", htmlMode);
   $(".refresh-preview").on("click", manualRefresh);
   $("#letter_control").on("change", letterCase);
   $("#unit_control").on("change", unitControl);
