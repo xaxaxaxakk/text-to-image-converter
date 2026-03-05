@@ -2011,13 +2011,31 @@ function renderPreviewContent() {
   updatePreviewDownloadAllButton(chunks.length);
 }
 function refreshPreview() {
-  $(".refresh-preview").removeClass("shown");
+  const autoPreviewEnabled = !!extension_settings[extensionName].autoPreview;
+  const $refreshNotice = $(".refresh-preview");
 
-  if (!extension_settings[extensionName].autoPreview) {
-    $(".refresh-preview").addClass("shown");
-    $("#image_preview_container").empty();
-    $("#image_preview_box h4 .dl_all").remove();
+  if (!autoPreviewEnabled) {
+    const $previewContainer = $("#image_preview_container");
+    const $dlAllButtons = $("#image_preview_box h4 .dl_all");
+    const isAlreadyManualState =
+      $refreshNotice.hasClass("shown")
+      && $previewContainer.children().length === 0
+      && $dlAllButtons.length === 0;
+
+    if (isAlreadyManualState) return;
+
+    $refreshNotice.addClass("shown");
+    if ($previewContainer.children().length > 0) {
+      $previewContainer.empty();
+    }
+    if ($dlAllButtons.length > 0) {
+      $dlAllButtons.remove();
+    }
     return;
+  }
+
+  if ($refreshNotice.hasClass("shown")) {
+    $refreshNotice.removeClass("shown");
   }
 
   renderPreviewContent();
@@ -2026,6 +2044,28 @@ function manualRefresh() {
   if (!extension_settings[extensionName].autoPreview) {
     renderPreviewContent();
   }
+}
+function renderPreviewForExtraction() {
+  if (extension_settings[extensionName].autoPreview) {
+    refreshPreview();
+    return false;
+  }
+
+  $(".refresh-preview").removeClass("shown");
+  renderPreviewContent();
+  return true;
+}
+function restorePreviewAfterExtraction(forceRendered) {
+  if (!forceRendered) return;
+
+  if (extension_settings[extensionName].autoPreview) {
+    refreshPreview();
+    return;
+  }
+
+  $("#image_preview_container").empty();
+  $("#image_preview_box h4 .dl_all").remove();
+  $(".refresh-preview").addClass("shown");
 }
 function syncHtmlSwitcherInputUIState() {
   const hasItems = $("#tti_html_switcher_list .tti-html-switcher-text").length > 0;
@@ -2642,9 +2682,9 @@ function generateTextImage(chunk, index) {
 
         ctx.textAlign = "left";
         let x = alignX;
-        line.forEach((span) => {
+        line.forEach((span, i) => {
           renderSpan(span, x, textY, "background");
-          x += measuredWidths[line.indexOf(span)];
+          x += measuredWidths[i];
         });
         
         x = alignX;
@@ -3410,8 +3450,10 @@ function setupImageConvertButton() {
   let selectedText = "";
   let liveSelectedText = "";
   let rememberedSelections = [];
+  let bookmarkedSelectionSources = [];
   let selectedMesBlock = null;
-  let timeout;
+  let selectionSource = null;
+  let selectionChangeFrame = null;
   let clearSelectionTimeout;
   let $selectionFloat = null;
   let menuOpened = false;
@@ -3432,8 +3474,66 @@ function setupImageConvertButton() {
     selectedText = buildCombinedSelectedText();
   }
 
+  function normalizeSelectionSourceText(text) {
+    return String(text || "").trim();
+  }
+
+  function getCurrentSelectionSourceText() {
+    return normalizeSelectionSourceText(selectedText || liveSelectedText);
+  }
+
+  function pushBookmarkedSelectionSource(sourceText) {
+    const normalized = normalizeSelectionSourceText(sourceText);
+    if (!normalized) return false;
+    bookmarkedSelectionSources.push(normalized);
+    return true;
+  }
+
+  function getCodeExtractionSourceTexts() {
+    const sources = [...bookmarkedSelectionSources];
+    const currentSource = getCurrentSelectionSourceText();
+
+    if (currentSource && (sources.length === 0 || sources[sources.length - 1] !== currentSource)) {
+      sources.push(currentSource);
+    }
+    return sources;
+  }
+
+  function clearBookmarkedSelectionSources() {
+    bookmarkedSelectionSources = [];
+  }
+
+  function setHtmlSwitcherTexts(texts = []) {
+    const $switcherList = $("#tti_html_switcher_list");
+    if (!$switcherList.length) return;
+
+    $switcherList.empty();
+    texts.forEach((value) => {
+      appendHtmlSwitcherInput(value);
+    });
+    syncHtmlSwitcherInputUIState();
+  }
+
+  function applyCodeExtractionSourceTexts(sourceTexts) {
+    const normalizedSources = sourceTexts
+      .map((value) => normalizeSelectionSourceText(value))
+      .filter((value) => value.length > 0);
+    const [mainText = "", ...bookmarkTexts] = normalizedSources;
+    const previousSwitcherTexts = getHtmlSwitcherTexts();
+
+    setHtmlSwitcherTexts(bookmarkTexts);
+
+    return {
+      mainText,
+      restoreSwitcher: () => setHtmlSwitcherTexts(previousSwitcherTexts),
+    };
+  }
+
   function hasRememberedSelection() {
     return rememberedSelections.length > 0;
+  }
+  function hasBookmarkedSelectionSources() {
+    return bookmarkedSelectionSources.length > 0;
   }
   function getSelectionMesBlock(selection) {
     const anchorNode = selection?.anchorNode;
@@ -3444,12 +3544,21 @@ function setupImageConvertButton() {
     return getSelectionMesBlock(selection).length > 0;
   }
 
-  function allClearSelection() {
+  function allClearSelection(options = {}) {
+    const shouldClearBookmarks = options.clearBookmarks === true;
     clearTimeout(clearSelectionTimeout);
+    if (selectionChangeFrame !== null) {
+      cancelAnimationFrame(selectionChangeFrame);
+      selectionChangeFrame = null;
+    }
     selectedText = "";
     liveSelectedText = "";
     rememberedSelections = [];
     selectedMesBlock = null;
+    selectionSource = null;
+    if (shouldClearBookmarks) {
+      clearBookmarkedSelectionSources();
+    }
     hideSelectionFloat();
   }
 
@@ -3461,8 +3570,8 @@ function setupImageConvertButton() {
         startClearSelectionTimer();
         return;
       }
-      allClearSelection();
-    }, 20000);
+      allClearSelection({clearBookmarks: true});
+    }, 30000);
   }
 
   function ensureSelectionFloat() {
@@ -3484,10 +3593,30 @@ function setupImageConvertButton() {
             if (!liveSelectedText) return;
             rememberedSelections.push(liveSelectedText);
             liveSelectedText = "";
+            selectedMesBlock = null;
+            selectionSource = null;
             syncSelectedTextState();
             startClearSelectionTimer();
             window.getSelection().removeAllRanges();
             hideSelectionFloat();
+          }),
+        $("<button>")
+          .addClass("tti-selection-bookmark fa-solid fa-bookmark")
+          .attr({
+            type: "button",
+            title: "책갈피 추가",
+            "data-i18n": "[title]책갈피 추가",
+          })
+          .on("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const currentSourceText = getCurrentSelectionSourceText();
+            if (!currentSourceText) return;
+            if (!pushBookmarkedSelectionSource(currentSourceText)) return;
+            toastr.success("책갈피 추가 완료");
+            allClearSelection();
+            startClearSelectionTimer();
+            window.getSelection().removeAllRanges();
           }),
         $("<button>")
           .addClass("tti-selection-toggle fa-solid fa-camera-retro")
@@ -3511,44 +3640,88 @@ function setupImageConvertButton() {
   function renderMainMenu() {
     ensureSelectionFloat();
     const $menu = $selectionFloat.find(".tti-selection-menu").empty();
-    $menu.append(
-      $("<button>")
-        .addClass("tti-selection-action")
-        .attr("type", "button")
-        .text("이미지 발췌")
-        .on("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          renderPresetMenu(false, "이미지 프리셋");
-        }),
-      $("<button>")
-        .addClass("tti-selection-action")
-        .attr("type", "button")
-        .text("코드 발췌")
-        .on("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          renderPresetMenu(true, "코드 프리셋");
-        }),
-      $("<button>")
-        .addClass("tti-selection-action")
-        .attr("type", "button")
-        .text("즉시 발췌")
-        .on("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const currentPreset = $("#preset_selector").val();
-          if (!currentPreset || currentPreset === "nonePreset") {
-            toastr.warning("선택된 프리셋이 없습니다.");
-            return;
-          }
-          if (!selectedText) return;
-          closeSelectionMenu();
-          setExtractText(selectedText);
-          allClearSelection();
-          window.getSelection().removeAllRanges();
-        })
-    );
+    const currentPresetName = $("#preset_selector").val();
+    const presets = extension_settings[extensionName].presets || {};
+    const currentPreset =
+      currentPresetName && currentPresetName !== "nonePreset"
+        ? presets[currentPresetName]
+        : null;
+    const isCurrentPresetHtml = !!currentPreset?.htmlMode;
+    const instantExtractLabel = currentPresetName && currentPresetName !== "nonePreset"
+      ? `${currentPresetName} (현재)`
+      : "즉시 발췌";
+
+    const $imageExtractButton = $("<button>")
+      .addClass("tti-selection-action")
+      .attr("type", "button")
+      .text("이미지 발췌")
+      .on("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        renderPresetMenu(false, "이미지 프리셋");
+      });
+
+    const $codeExtractButton = $("<button>")
+      .addClass("tti-selection-action")
+      .attr("type", "button")
+      .text("코드 발췌")
+      .on("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        renderPresetMenu(true, "코드 프리셋");
+      });
+
+
+
+    const $instantExtractButton = $("<button>")
+      .addClass("tti-selection-action")
+      .attr("type", "button")
+      .text(instantExtractLabel)
+      .on("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const currentPreset = $("#preset_selector").val();
+        if (!currentPreset || currentPreset === "nonePreset") {
+          toastr.warning("선택된 프리셋이 없습니다.");
+          return;
+        }
+
+        const codeSourceTexts = isCurrentPresetHtml ? getCodeExtractionSourceTexts() : [];
+
+        closeSelectionMenu();
+
+        let restoreTemporarySwitcher = null;
+        let textForExtraction = selectedText;
+
+        if (isCurrentPresetHtml) {
+          const extractionSource = applyCodeExtractionSourceTexts(codeSourceTexts);
+          textForExtraction = extractionSource.mainText;
+          restoreTemporarySwitcher = extractionSource.restoreSwitcher;
+        }
+
+        setExtractText(textForExtraction, {
+          clearMainText: true,
+          onComplete: () => {
+            if (restoreTemporarySwitcher) {
+              restoreTemporarySwitcher();
+            }
+            clearBookmarkedSelectionSources();
+          },
+        });
+        allClearSelection();
+        window.getSelection().removeAllRanges();
+      });
+
+    const $applyCurrentPresetButton = createSettingsApplyButton(() => {
+      const currentPreset = $("#preset_selector").val();
+      applySelectionToSettingsByPreset(currentPreset, isCurrentPresetHtml);
+    });
+
+    const $currentPresetActionRow = $("<div>")
+      .addClass("tti-selection-action-row")
+      .append($instantExtractButton, $applyCurrentPresetButton);
+
+    $menu.append($imageExtractButton, $codeExtractButton, $currentPresetActionRow);
   }
 
   function openSelectionMenu() {
@@ -3556,13 +3729,9 @@ function setupImageConvertButton() {
     renderMainMenu();
     menuOpened = true;
     $selectionFloat.addClass("menu-open");
-    keepSelectionFloatInViewport();
     requestAnimationFrame(() => {
-      keepSelectionFloatInViewport();
+      positionMenuBelowFloat();
     });
-    setTimeout(() => {
-      keepSelectionFloatInViewport();
-    }, 0);
   }
 
   function closeSelectionMenu() {
@@ -3570,7 +3739,6 @@ function setupImageConvertButton() {
     menuOpened = false;
     $selectionFloat.removeClass("menu-open");
     $selectionFloat.find(".tti-selection-menu").empty();
-    keepSelectionFloatInViewport();
   }
 
   function hideSelectionFloat() {
@@ -3592,7 +3760,6 @@ function setupImageConvertButton() {
 
     lastSelectionPoint = {x: nextLeft, y: nextTop};
     $selectionFloat.css({left: `${nextLeft}px`, top: `${nextTop}px`}).addClass("is-visible");
-    keepSelectionFloatInViewport();
   }
 
   function getSelectionBoundingRect(selection) {
@@ -3607,6 +3774,11 @@ function setupImageConvertButton() {
     const selectionRect = getSelectionBoundingRect(selection);
     if (!selectionRect) return;
     showSelectionFloatAt(selectionRect.left + selectionRect.width / 2, selectionRect.bottom, "bottom-center");
+  }
+  function showSelectionFloatAtMesButton(buttonElement) {
+    if (!buttonElement || !buttonElement.getBoundingClientRect) return;
+    const rect = buttonElement.getBoundingClientRect();
+    showSelectionFloatAt(rect.left + rect.width / 2, rect.bottom, "bottom-center");
   }
 
   function updateSelectionFloatPositionFromSelection() {
@@ -3626,33 +3798,18 @@ function setupImageConvertButton() {
     selectionPositionFrame = requestAnimationFrame(() => {
       selectionPositionFrame = null;
       updateSelectionFloatPositionFromSelection();
-      keepSelectionFloatInViewport();
     });
   }
 
-  function keepSelectionFloatInViewport() {
+  function positionMenuBelowFloat() {
     if (!$selectionFloat || !$selectionFloat.hasClass("is-visible")) return;
-
-    const margin = 10;
-    const element = $selectionFloat[0];
-    const rect = element.getBoundingClientRect();
-    let left = parseFloat($selectionFloat.css("left")) || lastSelectionPoint.x;
-    let top = parseFloat($selectionFloat.css("top")) || lastSelectionPoint.y;
-
-    if (rect.right > window.innerWidth - margin) {
-      left -= rect.right - (window.innerWidth - margin);
-    }
-    if (rect.left < margin) {
-      left += margin - rect.left;
-    }
-    if (rect.bottom > window.innerHeight - margin) {
-      top -= rect.bottom - (window.innerHeight - margin);
-    }
-    if (rect.top < margin) {
-      top += margin - rect.top;
-    }
-
-    $selectionFloat.css({left: `${Math.round(left)}px`, top: `${Math.round(top)}px`});
+    const $menu = $selectionFloat.find(".tti-selection-menu");
+    if (!$menu.length) return;
+    const floatRect = $selectionFloat[0].getBoundingClientRect();
+    const menuHeight = $menu[0].getBoundingClientRect().height;
+    const desiredTop = floatRect.bottom + 8;
+    const maxTop = window.innerHeight - menuHeight - 10;
+    $menu.css("top", `${Math.min(desiredTop, maxTop)}px`);
   }
 
   function getPresetNamesByMode(isHtmlMode) {
@@ -3665,6 +3822,48 @@ function setupImageConvertButton() {
   function applyPresetFromMenu(presetName) {
     const $selector = $("#preset_selector");
     $selector.val(presetName).trigger("change");
+  }
+
+  function applySelectionToSettingsByPreset(presetName, isHtmlMode) {
+    if (!presetName || presetName === "nonePreset") {
+      toastr.warning("선택된 프리셋이 없습니다.");
+      return;
+    }
+
+    const sourceTexts = getCodeExtractionSourceTexts();
+
+    applyPresetFromMenu(presetName);
+
+    if (isHtmlMode) {
+      const extractionSource = applyCodeExtractionSourceTexts(sourceTexts);
+      $("#text_to_image").val(extractionSource.mainText);
+    } else {
+      const mergedText = sourceTexts
+        .map((value) => normalizeSelectionSourceText(value))
+        .filter((value) => value.length > 0)
+        .join("\n\n");
+      $("#text_to_image").val(mergedText);
+    }
+
+    refreshPreview();
+    toastr.success("설정 반영 완료");
+    allClearSelection({clearBookmarks: true});
+    window.getSelection().removeAllRanges();
+  }
+
+  function createSettingsApplyButton(onClick) {
+    return $("<button>")
+      .addClass("tti-selection-clipboard fa-regular fa-clipboard")
+      .attr({
+        type: "button",
+        title: "확장패널에 복사",
+        "data-i18n": "[title]확장패널에 복사",
+      })
+      .on("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+      });
   }
 
   function restorePresetAfterSelection(originalPresetName) {
@@ -3690,7 +3889,7 @@ function setupImageConvertButton() {
             e.preventDefault();
             e.stopPropagation();
             renderMainMenu();
-            keepSelectionFloatInViewport();
+            positionMenuBelowFloat();
           })
       );
 
@@ -3698,70 +3897,107 @@ function setupImageConvertButton() {
 
     if (presetNames.length === 0) {
       $menu.append($("<div>").addClass("tti-selection-empty").text("사용 가능한 프리셋이 없습니다."));
-      keepSelectionFloatInViewport();
+      positionMenuBelowFloat();
       return;
     }
 
     presetNames.forEach((presetName) => {
+      const $presetExtractButton = $("<button>")
+        .addClass("tti-selection-preset")
+        .attr("type", "button")
+        .text(presetName)
+        .on("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const codeSourceTexts = isHtmlMode ? getCodeExtractionSourceTexts() : [];
+
+          const originalPresetName = $("#preset_selector").val() || "nonePreset";
+          const shouldRestorePreset = originalPresetName !== presetName;
+          applyPresetFromMenu(presetName);
+          closeSelectionMenu();
+
+          let restoreTemporarySwitcher = null;
+          let textForExtraction = selectedText;
+
+          if (isHtmlMode) {
+            const extractionSource = applyCodeExtractionSourceTexts(codeSourceTexts);
+            textForExtraction = extractionSource.mainText;
+            restoreTemporarySwitcher = extractionSource.restoreSwitcher;
+          }
+
+          setExtractText(textForExtraction, {
+            clearMainText: true,
+            onComplete: () => {
+              if (restoreTemporarySwitcher) {
+                restoreTemporarySwitcher();
+              }
+              clearBookmarkedSelectionSources();
+              if (shouldRestorePreset) {
+                restorePresetAfterSelection(originalPresetName);
+              }
+            },
+          });
+          allClearSelection();
+          window.getSelection().removeAllRanges();
+        });
+
+      const $presetApplyButton = createSettingsApplyButton(() => {
+        applySelectionToSettingsByPreset(presetName, isHtmlMode);
+      });
+
       $menu.append(
-        $("<button>")
-          .addClass("tti-selection-preset")
-          .attr("type", "button")
-          .text(presetName)
-          .on("click", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (!selectedText) return;
-            const originalPresetName = $("#preset_selector").val() || "nonePreset";
-            const shouldRestorePreset = originalPresetName !== presetName;
-            applyPresetFromMenu(presetName);
-            closeSelectionMenu();
-            setExtractText(selectedText, {
-              onComplete: () => {
-                if (shouldRestorePreset) {
-                  restorePresetAfterSelection(originalPresetName);
-                }
-              },
-            });
-            allClearSelection();
-            window.getSelection().removeAllRanges();
-          })
+        $("<div>")
+          .addClass("tti-selection-preset-row")
+          .append($presetExtractButton, $presetApplyButton)
       );
     });
 
-    keepSelectionFloatInViewport();
+    positionMenuBelowFloat();
+  }
+
+  function processSelectionChange() {
+    const selection = window.getSelection();
+    if (!selection) return;
+    const selectedString = selection.toString().trim();
+
+    if (selectedString) {
+      const $mes = getSelectionMesBlock(selection);
+      if (!$mes.length) {
+        if (selectedText || hasRememberedSelection() || hasBookmarkedSelectionSources()) {
+          startClearSelectionTimer();
+        }
+        return;
+      }
+
+      liveSelectedText = selectedString;
+      selectionSource = "selection";
+      syncSelectedTextState();
+      selectedMesBlock = $mes;
+      showSelectionFloatAtSelectionBottomCenter(selection);
+      startClearSelectionTimer();
+      return;
+    }
+
+    if (selectionSource === "mes_button" && liveSelectedText) {
+      startClearSelectionTimer();
+      return;
+    }
+
+    liveSelectedText = "";
+    selectionSource = null;
+    syncSelectedTextState();
+    if (hasRememberedSelection() || selectedText || hasBookmarkedSelectionSources()) {
+      startClearSelectionTimer();
+    }
+    hideSelectionFloat();
   }
 
   function handleSelectionChange() {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      const selection = window.getSelection();
-      if (!selection) return;
-      const selectedString = selection.toString().trim();
-
-      if (selectedString) {
-        const $mes = getSelectionMesBlock(selection);
-        if (!$mes.length) {
-          if (selectedText || hasRememberedSelection()) {
-            startClearSelectionTimer();
-          }
-          return;
-        }
-
-        liveSelectedText = selectedString;
-        syncSelectedTextState();
-        selectedMesBlock = $mes;
-        showSelectionFloatAtSelectionBottomCenter(selection);
-        startClearSelectionTimer();
-      } else {
-        liveSelectedText = "";
-        syncSelectedTextState();
-        if (hasRememberedSelection() || selectedText) {
-          startClearSelectionTimer();
-        }
-        hideSelectionFloat();
-      }
-    }, 20);
+    if (selectionChangeFrame !== null) return;
+    selectionChangeFrame = requestAnimationFrame(() => {
+      selectionChangeFrame = null;
+      processSelectionChange();
+    });
   }
 
   $(document).on("selectionchange", function () {
@@ -3780,7 +4016,11 @@ function setupImageConvertButton() {
     liveSelectedText = "";
     selectedText = "";
     selectedMesBlock = null;
+    selectionSource = null;
     hideSelectionFloat();
+    if (hasBookmarkedSelectionSources()) {
+      startClearSelectionTimer();
+    }
   });
   $(window).on("resize", scheduleSelectionFloatPositionUpdate);
   window.addEventListener("scroll", scheduleSelectionFloatPositionUpdate, true);
@@ -3798,13 +4038,16 @@ function setupImageConvertButton() {
       .on("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const text =
-          selectedText && selectedMesBlock && selectedMesBlock.is($mesBlock)
-            ? selectedText
-            : $mesBlock.find(".mes_text")[0].innerText;
+        const mesTextNode = $mesBlock.find(".mes_text")[0];
+        const text = mesTextNode ? mesTextNode.innerText : "";
         if (text) {
-          setExtractText(text);
-          allClearSelection();
+          liveSelectedText = text;
+          selectedMesBlock = $mesBlock;
+          selectionSource = "mes_button";
+          syncSelectedTextState();
+          closeSelectionMenu();
+          showSelectionFloatAtMesButton(e.currentTarget);
+          startClearSelectionTimer();
           window.getSelection().removeAllRanges();
         }
       });
@@ -3827,6 +4070,14 @@ function setupImageConvertButton() {
 }
 function setExtractText(text, options = {}) {
   const onComplete = typeof options.onComplete === "function" ? options.onComplete : null;
+  const shouldClearMainText = options.clearMainText === true;
+
+  const cleanupMainTextAfterExtraction = () => {
+    if (!shouldClearMainText) return;
+    $("#text_to_image").val("");
+    refreshPreview();
+  };
+
   $("#text_to_image").val(text);
 
   if (currentCustomFont) {
@@ -3855,21 +4106,42 @@ function setExtractText(text, options = {}) {
     replaceWords();
   }
 
-  refreshPreview();
+  const forceRenderedPreview = renderPreviewForExtraction();
   if (isHtmlModeEnabled()) {
     const htmlCode = createHTMLSnippet($("#text_to_image").val() || "", 0);
-    Promise.resolve(copyToClipboard(htmlCode)).finally(() => {
-      if (onComplete) onComplete();
-    });
-    toastr.success("코드 복사 완료!");
+    Promise.resolve(copyToClipboard(htmlCode))
+      .then((copied) => {
+        if (copied) {
+          toastr.success("코드 복사 완료!");
+        } else {
+          toastr.warning("코드 복사에 실패했습니다.");
+        }
+      })
+      .catch(() => {
+        toastr.warning("코드 복사에 실패했습니다.");
+      })
+      .finally(() => {
+        restorePreviewAfterExtraction(forceRenderedPreview);
+        cleanupMainTextAfterExtraction();
+        if (onComplete) onComplete();
+      });
     return;
   }
-  autoDownload("#image_preview_container .download-btn", 1500);
-  if (onComplete) {
-    setTimeout(() => {
-      onComplete();
-    }, 2600);
+
+  const $downloadButtons = $("#image_preview_container .download-btn");
+  if ($downloadButtons.length === 0) {
+    restorePreviewAfterExtraction(forceRenderedPreview);
+    toastr.warning("저장 가능한 이미지가 없습니다.");
+    if (onComplete) onComplete();
+    return;
   }
+
+  autoDownload("#image_preview_container .download-btn", 1500);
+  setTimeout(() => {
+    restorePreviewAfterExtraction(forceRenderedPreview);
+    cleanupMainTextAfterExtraction();
+    if (onComplete) onComplete();
+  }, 2600);
 }
 
 jQuery(async () => {
