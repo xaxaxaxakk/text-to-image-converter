@@ -3747,15 +3747,55 @@ function setupImageConvertButton() {
     $selectionFloat.removeClass("is-visible");
   }
 
+  function getSelectionFloatSize() {
+    if (!$selectionFloat || !$selectionFloat.length) {
+      return {width: 0, height: 0};
+    }
+
+    const floatNode = $selectionFloat[0];
+    const visibleRect = floatNode.getBoundingClientRect();
+    if (visibleRect.width > 0 || visibleRect.height > 0) {
+      return {width: visibleRect.width, height: visibleRect.height};
+    }
+
+    const previousDisplay = floatNode.style.display;
+    const previousVisibility = floatNode.style.visibility;
+    floatNode.style.visibility = "hidden";
+    floatNode.style.display = "flex";
+    const hiddenRect = floatNode.getBoundingClientRect();
+    floatNode.style.display = previousDisplay;
+    floatNode.style.visibility = previousVisibility;
+
+    return {width: hiddenRect.width, height: hiddenRect.height};
+  }
+
   function showSelectionFloatAt(x, y, position = "default") {
     ensureSelectionFloat();
+    const {width: floatWidth, height: floatHeight} = getSelectionFloatSize();
     let nextLeft = x;
     let nextTop = y;
 
     if (position === "bottom-center") {
-      const floatRect = $selectionFloat[0].getBoundingClientRect();
-      nextLeft = x - floatRect.width / 2;
+      nextLeft = x - floatWidth / 2;
       nextTop = y + 16;
+    } else if (position === "top-center") {
+      nextLeft = x - floatWidth / 2;
+      nextTop = y - floatHeight - 8;
+    }
+
+    if (floatWidth > 0) {
+      const minLeft = 10;
+      const maxLeft = window.innerWidth - floatWidth - 10;
+      if (maxLeft >= minLeft) {
+        nextLeft = Math.max(minLeft, Math.min(nextLeft, maxLeft));
+      }
+    }
+    if (floatHeight > 0) {
+      const minTop = 10;
+      const maxTop = window.innerHeight - floatHeight - 10;
+      if (maxTop >= minTop) {
+        nextTop = Math.max(minTop, Math.min(nextTop, maxTop));
+      }
     }
 
     lastSelectionPoint = {x: nextLeft, y: nextTop};
@@ -3775,19 +3815,46 @@ function setupImageConvertButton() {
     if (!selectionRect) return;
     showSelectionFloatAt(selectionRect.left + selectionRect.width / 2, selectionRect.bottom, "bottom-center");
   }
+
+  function getMesTextBoundingRect($mesBlock) {
+    if (!$mesBlock || !$mesBlock.length) return null;
+    const mesTextNode = $mesBlock.find(".mes_text")[0];
+    if (!mesTextNode || !mesTextNode.getBoundingClientRect) return null;
+    const rect = mesTextNode.getBoundingClientRect();
+    if (!rect || (!rect.width && !rect.height)) return null;
+    return rect;
+  }
+
   function showSelectionFloatAtMesButton(buttonElement) {
+    const mesRect = getMesTextBoundingRect(selectedMesBlock);
+    if (mesRect) {
+      showSelectionFloatAt(mesRect.left + mesRect.width / 2, mesRect.top, "top-center");
+      return;
+    }
+
     if (!buttonElement || !buttonElement.getBoundingClientRect) return;
     const rect = buttonElement.getBoundingClientRect();
     showSelectionFloatAt(rect.left + rect.width / 2, rect.bottom, "bottom-center");
   }
 
   function updateSelectionFloatPositionFromSelection() {
+    if (selectionSource === "mes_button" && liveSelectedText && selectedMesBlock && selectedMesBlock.length) {
+      showSelectionFloatAtMesButton();
+      if (menuOpened) {
+        positionMenuBelowFloat();
+      }
+      return;
+    }
+
     if (!liveSelectedText) return;
     const selection = window.getSelection();
     if (!selection || !selection.rangeCount) return;
     const selectedString = selection.toString().trim();
     if (!selectedString) return;
     showSelectionFloatAtSelectionBottomCenter(selection);
+    if (menuOpened) {
+      positionMenuBelowFloat();
+    }
   }
 
   function scheduleSelectionFloatPositionUpdate() {
@@ -3806,10 +3873,34 @@ function setupImageConvertButton() {
     const $menu = $selectionFloat.find(".tti-selection-menu");
     if (!$menu.length) return;
     const floatRect = $selectionFloat[0].getBoundingClientRect();
-    const menuHeight = $menu[0].getBoundingClientRect().height;
+    const menuRect = $menu[0].getBoundingClientRect();
+    const menuHeight = menuRect.height;
+    const menuWidth = menuRect.width;
     const desiredTop = floatRect.bottom + 8;
     const maxTop = window.innerHeight - menuHeight - 10;
-    $menu.css("top", `${Math.min(desiredTop, maxTop)}px`);
+    const nextTop = Math.max(10, Math.min(desiredTop, maxTop));
+
+    if (selectionSource === "mes_button") {
+      const desiredCenterX = floatRect.left + floatRect.width / 2;
+      const minCenterX = 10 + menuWidth / 2;
+      const maxCenterX = window.innerWidth - 10 - menuWidth / 2;
+      const nextCenterX = minCenterX <= maxCenterX
+        ? Math.max(minCenterX, Math.min(desiredCenterX, maxCenterX))
+        : window.innerWidth / 2;
+
+      $menu.css({
+        top: `${nextTop}px`,
+        left: `${nextCenterX}px`,
+        transform: "translateX(-50%)",
+      });
+      return;
+    }
+
+    $menu.css({
+      top: `${nextTop}px`,
+      left: "50%",
+      transform: "translateX(-50%)",
+    });
   }
 
   function getPresetNamesByMode(isHtmlMode) {
