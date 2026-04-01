@@ -59,6 +59,9 @@ const defaultSettings = {
   letterCase: false,
   unitControl: false,
   setHighlighterTags: [],
+  dragOnlyFloat: true,
+  extMenuShortcut: false,
+  mesButtonEnabled: true,
 };
 let defaultBackgroundUrlMap = new Map();
 let defaultBackgroundBasenameMap = new Map();
@@ -141,6 +144,7 @@ function syncSelectedBackgroundUI() {
 }
 let rangeValueTooltip = null;
 let isImageConvertButtonSetup = false;
+let _createImageConvertButton = null;
 function ensureRangeValueTooltip() {
   if (rangeValueTooltip && document.body.contains(rangeValueTooltip)) {
     return rangeValueTooltip;
@@ -253,6 +257,9 @@ async function initSettings() {
     htmlMode,
     letterCase,
     unitControl,
+    dragOnlyFloat,
+    extMenuShortcut,
+    mesButtonEnabled,
   } = extension_settings[extensionName];
 
   $("#tti_font_family").val(fontFamily);
@@ -301,6 +308,9 @@ async function initSettings() {
   $("#html_toggle").prop("checked", htmlMode);
   $("#letter_control").prop("checked", letterCase);
   $("#unit_control").prop("checked", unitControl);
+  $("#tti_drag_only_float").prop("checked", dragOnlyFloat);
+  $("#tti_ext_menu_shortcut").prop("checked", extMenuShortcut);
+  $("#tti_mes_button_enabled").prop("checked", mesButtonEnabled);
 
   await loadFonts();
   await loadBG();
@@ -3854,6 +3864,7 @@ function setupImageConvertButton() {
   }
 
   function showSelectionFloatAtSelectionBottomCenter(selection) {
+    if (extension_settings[extensionName]?.dragOnlyFloat === false) return;
     const selectionRect = getSelectionBoundingRect(selection);
     if (!selectionRect) return;
     showSelectionFloatAt(selectionRect.left + selectionRect.width / 2, selectionRect.bottom, "bottom-center");
@@ -4187,6 +4198,9 @@ function setupImageConvertButton() {
       });
 
     $mesBlock.find(".extraMesButtons").append($button);
+    if (extension_settings[extensionName]?.mesButtonEnabled === false) {
+      $button.hide();
+    }
   }
 
   $("#chat .mes:not(:has(.mes_to_image))").each(function () {
@@ -4201,6 +4215,7 @@ function setupImageConvertButton() {
     });
   });
   observer.observe($("#chat")[0], {childList: true, subtree: true});
+  _createImageConvertButton = createImageConvertButton;
 }
 function setExtractText(text, options = {}) {
   const onComplete = typeof options.onComplete === "function" ? options.onComplete : null;
@@ -4278,6 +4293,82 @@ function setExtractText(text, options = {}) {
   }, 2600);
 }
 
+function syncExtMenuShortcutButton() {
+  const floatOn = !!extension_settings[extensionName]?.dragOnlyFloat;
+  const $floatBtn = $("#tti_ext_float_toggle");
+  if ($floatBtn.length) {
+    $floatBtn.find(".tti-ext-toggle-state")
+      .text(floatOn ? "ON" : "OFF")
+      .toggleClass("on", floatOn)
+      .toggleClass("off", !floatOn);
+  }
+
+  const mesOn = extension_settings[extensionName]?.mesButtonEnabled !== false;
+  const $mesBtn = $("#tti_ext_mes_toggle");
+  if ($mesBtn.length) {
+    $mesBtn.find(".tti-ext-toggle-state")
+      .text(mesOn ? "ON" : "OFF")
+      .toggleClass("on", mesOn)
+      .toggleClass("off", !mesOn);
+  }
+}
+
+function createExtMenuToggleItem(id, icon, label, getState, onToggle) {
+  const isOn = getState();
+  return $("<a>")
+    .attr({id, role: "listitem", tabindex: "0"})
+    .addClass("list-group-item flex-container flexGap5 interactable")
+    .html(
+      `<i class="${icon}"></i>` +
+      `<span>${label} </span>` +
+      `<span class="tti-ext-toggle-state ${isOn ? "on" : "off"}">${isOn ? "ON" : "OFF"}</span>`
+    )
+    .on("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      onToggle();
+      syncExtMenuShortcutButton();
+    });
+}
+
+function toggleExtMenuShortcutButton(show) {
+  if (show) {
+    if (!$("#tti_ext_mes_toggle").length) {
+      const $mesBtn = createExtMenuToggleItem(
+        "tti_ext_mes_toggle",
+        "fa-solid fa-camera-retro",
+        "메시지 액션버튼",
+        () => extension_settings[extensionName]?.mesButtonEnabled !== false,
+        () => {
+          const newVal = !extension_settings[extensionName].mesButtonEnabled;
+          extension_settings[extensionName].mesButtonEnabled = newVal;
+          $("#tti_mes_button_enabled").prop("checked", newVal).trigger("change");
+        }
+      );
+      $("#extensionsMenu").append($mesBtn);
+    }
+    if (!$("#tti_ext_float_toggle").length) {
+      const $floatBtn = createExtMenuToggleItem(
+        "tti_ext_float_toggle",
+        "fa-solid fa-hand-pointer",
+        "플로팅 메뉴",
+        () => !!extension_settings[extensionName]?.dragOnlyFloat,
+        () => {
+          const newVal = !extension_settings[extensionName].dragOnlyFloat;
+          extension_settings[extensionName].dragOnlyFloat = newVal;
+          $("#tti_drag_only_float").prop("checked", newVal);
+          saveSettings();
+        }
+      );
+      $("#extensionsMenu").append($floatBtn);
+    }
+    syncExtMenuShortcutButton();
+  } else {
+    $("#tti_ext_mes_toggle").remove();
+    $("#tti_ext_float_toggle").remove();
+  }
+}
+
 jQuery(async () => {
   const settingsHtml = await $.get(`${extensionFolderPath}/settings.html`);
   $("#extensions_settings2").append(settingsHtml);
@@ -4294,6 +4385,9 @@ jQuery(async () => {
   tabButtons();
   botCardButtons();
   highlighterOption();
+  if (extension_settings[extensionName].extMenuShortcut) {
+    toggleExtMenuShortcutButton(true);
+  }
 });
 
 function bindingFunctions() {
@@ -4350,6 +4444,34 @@ function bindingFunctions() {
 
   $("#how_to_use").on("click", () => {
     $(".how_to_use_box").slideToggle();
+  });
+  $("#tti_options_gear").on("click", function () {
+    $(this).toggleClass("active");
+    $(".tti_options_box").slideToggle(200);
+  });
+  $("#tti_drag_only_float").on("change", function () {
+    const checked = $(this).prop("checked");
+    extension_settings[extensionName].dragOnlyFloat = checked;
+    syncExtMenuShortcutButton();
+    saveSettings();
+  });
+  $("#tti_ext_menu_shortcut").on("change", function () {
+    const checked = $(this).prop("checked");
+    extension_settings[extensionName].extMenuShortcut = checked;
+    toggleExtMenuShortcutButton(checked);
+    saveSettings();
+  });
+  $("#tti_mes_button_enabled").on("change", function () {
+    const checked = $(this).prop("checked");
+    extension_settings[extensionName].mesButtonEnabled = checked;
+    if (checked && _createImageConvertButton) {
+      $("#chat .mes:not(:has(.mes_to_image))").each(function () {
+        _createImageConvertButton($(this));
+      });
+    }
+    $(".mes_to_image").toggle(checked);
+    syncExtMenuShortcutButton();
+    saveSettings();
   });
   $("#create_preset").on("click", () => {
     $("#preset_name").val("");
