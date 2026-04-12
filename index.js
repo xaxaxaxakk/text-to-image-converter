@@ -362,6 +362,9 @@ function getPresetSettings() {
   const settings = {...extension_settings[extensionName]};
   delete settings.presets;
   delete settings.currentPreset;
+  delete settings.dragOnlyFloat;
+  delete settings.mesButtonEnabled;
+  delete settings.extMenuShortcut;
   const imageFontSize = parseInt($("#tti_font_size_image").val(), 10);
   const htmlFontSize = parseInt($("#tti_font_size_html").val(), 10);
   settings.fontSizeImage = Number.isFinite(imageFontSize) ? imageFontSize : (settings.fontSizeImage || defaultSettings.fontSizeImage);
@@ -467,10 +470,16 @@ function deletePreset() {
   if (extension_settings[extensionName].currentPreset === presetName) {
     extension_settings[extensionName].currentPreset = null;
 
+    const _dragOnlyFloat = extension_settings[extensionName].dragOnlyFloat;
+    const _mesButtonEnabled = extension_settings[extensionName].mesButtonEnabled;
+    const _extMenuShortcut = extension_settings[extensionName].extMenuShortcut;
     extension_settings[extensionName] = {
       ...defaultSettings,
       presets: extension_settings[extensionName].presets,
       currentPreset: null,
+      dragOnlyFloat: _dragOnlyFloat,
+      mesButtonEnabled: _mesButtonEnabled,
+      extMenuShortcut: _extMenuShortcut,
     };
 
     $("#tti_font_family").val(defaultSettings.fontFamily);
@@ -549,10 +558,16 @@ function selectPreset() {
   }
 
   if (presetName === "nonePreset") {
+    const _dragOnlyFloat = extension_settings[extensionName].dragOnlyFloat;
+    const _mesButtonEnabled = extension_settings[extensionName].mesButtonEnabled;
+    const _extMenuShortcut = extension_settings[extensionName].extMenuShortcut;
     extension_settings[extensionName] = {
       ...defaultSettings,
       presets: extension_settings[extensionName].presets,
       currentPreset: null,
+      dragOnlyFloat: _dragOnlyFloat,
+      mesButtonEnabled: _mesButtonEnabled,
+      extMenuShortcut: _extMenuShortcut,
     };
 
     if (currentCustomFont) {
@@ -665,6 +680,9 @@ function applyPreset(presetName) {
         "fontSize",
         "fontSizeImage",
         "fontSizeHtml",
+        "dragOnlyFloat",
+        "mesButtonEnabled",
+        "extMenuShortcut",
       ].includes(key)
     ) {
       continue;
@@ -2177,7 +2195,7 @@ function manualRefresh() {
 }
 function renderPreviewForExtraction() {
   if (extension_settings[extensionName].autoPreview) {
-    refreshPreview();
+    renderPreviewContent();
     return false;
   }
 
