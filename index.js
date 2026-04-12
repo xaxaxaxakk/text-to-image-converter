@@ -1,6 +1,30 @@
-import {extension_settings} from "../../../extensions.js";
+﻿import {extension_settings} from "../../../extensions.js";
 import {saveSettings} from "../../../../script.js";
+
+function debounce(fn, delay) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+function safeGetItem(key) {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+function safeSetItem(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) { console.warn('[text-to-image-converter] localStorage 저장 실패:', e); }
+}
+function safeRemoveItem(key) {
+  try { localStorage.removeItem(key); } catch { }
+}
+
+const debouncedSaveSettings = debounce(() => saveSettings(), 200);
+window.addEventListener("beforeunload", () => saveSettings());
+
+const JSZipLocal = "scripts/extensions/third-party/text-to-image-converter/libs/jszip.min.js";
 const JSZipCDN = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+const FileSaverLocal = "scripts/extensions/third-party/text-to-image-converter/libs/FileSaver.min.js";
 const FileSaverCDN = "https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js";
 
 const extensionName = "text-to-image-converter";
@@ -312,9 +336,7 @@ async function initSettings() {
   $("#tti_ext_menu_shortcut").prop("checked", extMenuShortcut);
   $("#tti_mes_button_enabled").prop("checked", mesButtonEnabled);
 
-  await loadFonts();
-  await loadBG();
-  await loadBackgroundURLMap();
+  await Promise.all([loadFonts(), loadBG(), loadBackgroundURLMap()]);
   highlighterTags();
   applyHtmlModeUIState();
   updateFooterLayoutUIState();
@@ -1218,26 +1240,31 @@ function crc32(data) {
 // 폰트 패밀리
 function fontFamily(event) {
   extension_settings[extensionName].fontFamily = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 
 // 폰트 로드
 async function loadFonts() {
-  const response = await fetch(`${extensionFolderPath}/font-family.json`);
-  const fonts = await response.json();
-  fonts.sort((a, b) => a.label.localeCompare(b.label));
-  const select = $("#tti_font_family").empty();
+  try {
+    const response = await fetch(`${extensionFolderPath}/font-family.json`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const fonts = await response.json();
+    fonts.sort((a, b) => a.label.localeCompare(b.label));
+    const select = $("#tti_font_family").empty();
 
-  const fontPromises = fonts.map(font => document.fonts.load(`1em ${font.value}`));
-  await Promise.all(fontPromises);
+    const fontPromises = fonts.map(font => document.fonts.load(`1em ${font.value}`).catch(() => {}));
+    await Promise.all(fontPromises);
   
-  fonts.forEach(font => {
-    select.append(`<option value="${font.value}">${font.label}</option>`);
-  });
+    fonts.forEach(font => {
+      select.append(`<option value="${font.value}">${font.label}</option>`);
+    });
 
-  select.val(extension_settings[extensionName].fontFamily);
-  refreshPreview();
+    select.val(extension_settings[extensionName].fontFamily);
+    refreshPreview();
+  } catch (e) {
+    console.warn("[text-to-image-converter] 폰트 로드 실패:", e);
+  }
 }
 
 // 로컬 폰트 로드
@@ -1393,43 +1420,126 @@ function resolveBackgroundURLForHTML(backgroundValue) {
   return backgroundValue;
 }
 async function loadBG() {
-  const response = await fetch(`${extensionFolderPath}/backgrounds-list.json`);
-  const backgrounds = await response.json();
-  const gallery = $("#background_image_gallery").empty();
-  const selectedBackground = getSelectedBackgroundForCurrentMode();
-  const galleryHtml = backgrounds.map((bg) => {
-    const bgPath = `${extensionFolderPath}/default-backgrounds/${bg}`;
-    const isSelected = selectedBackground === bgPath;
-    return `
-      <div class="bg-image-item ${isSelected ? "selected" : ""}" data-path="${bgPath}">
-        <img src="${bgPath}" alt="${bg}" loading="lazy" decoding="async" />
-      </div>
-    `;
-  }).join("");
-  gallery.html(galleryHtml);
-  $(".bg-image-item").on("click", selectCanvasBG);
+  try {
+    const response = await fetch(`${extensionFolderPath}/backgrounds-list.json`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const backgrounds = await response.json();
+    const gallery = $("#background_image_gallery").empty();
+    const selectedBackground = getSelectedBackgroundForCurrentMode();
+    const galleryHtml = backgrounds.map((bg) => {
+      const bgPath = `${extensionFolderPath}/default-backgrounds/${bg}`;
+      const isSelected = selectedBackground === bgPath;
+      return `
+        <div class="bg-image-item ${isSelected ? "selected" : ""}" data-path="${bgPath}">
+          <img src="${bgPath}" alt="${bg}" loading="lazy" decoding="async" />
+        </div>
+      `;
+    }).join("");
+    gallery.html(galleryHtml);
+    $(".bg-image-item").on("click", selectCanvasBG);
+  } catch (e) {
+    console.warn("[text-to-image-converter] 배경 목록 로드 실패:", e);
+  }
 }
-function storeBackground(name, imageData, storageKey = getCustomBackgroundStorageKey()) {
-  const customBackgrounds = JSON.parse(localStorage.getItem(storageKey) || "{}");
-  customBackgrounds[name] = imageData;
-  localStorage.setItem(storageKey, JSON.stringify(customBackgrounds));
+
+const BG_DB_NAME = "txtToImgBackgrounds";
+const BG_DB_VERSION = 1;
+const BG_STORE_NAME = "backgrounds";
+
+function openBgDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(BG_DB_NAME, BG_DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(BG_STORE_NAME)) {
+        db.createObjectStore(BG_STORE_NAME);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
 }
-function deleteBackground(name, storageKey = getCustomBackgroundStorageKey()) {
-  const customBackgrounds = JSON.parse(localStorage.getItem(storageKey) || "{}");
-  delete customBackgrounds[name];
-  localStorage.setItem(storageKey, JSON.stringify(customBackgrounds));
+
+async function migrateLocalStorageBgToIDB() {
+  if (safeGetItem("txtToImg_bgMigrated") === "1") return;
+  for (const key of [CUSTOM_BG_STORAGE_IMAGE_KEY, CUSTOM_BG_STORAGE_HTML_KEY]) {
+    const raw = safeGetItem(key);
+    if (!raw) continue;
+    try {
+      const entries = JSON.parse(raw);
+      if (!entries || typeof entries !== "object") continue;
+      const db = await openBgDB();
+      const tx = db.transaction(BG_STORE_NAME, "readwrite");
+      const store = tx.objectStore(BG_STORE_NAME);
+      for (const [name, data] of Object.entries(entries)) {
+        store.put(data, `${key}::${name}`);
+      }
+      await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+      db.close();
+      safeRemoveItem(key);
+    } catch (e) {
+      console.warn("[text-to-image-converter] IndexedDB 마이그레이션 실패:", e);
+    }
+  }
+  safeSetItem("txtToImg_bgMigrated", "1");
+}
+
+async function storeBackground(name, imageData, storageKey = getCustomBackgroundStorageKey()) {
+  try {
+    const db = await openBgDB();
+    const tx = db.transaction(BG_STORE_NAME, "readwrite");
+    tx.objectStore(BG_STORE_NAME).put(imageData, `${storageKey}::${name}`);
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    db.close();
+  } catch (e) {
+    console.warn("[text-to-image-converter] 배경 저장 실패:", e);
+  }
+}
+
+async function deleteBackground(name, storageKey = getCustomBackgroundStorageKey()) {
+  try {
+    const db = await openBgDB();
+    const tx = db.transaction(BG_STORE_NAME, "readwrite");
+    tx.objectStore(BG_STORE_NAME).delete(`${storageKey}::${name}`);
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    db.close();
+  } catch (e) {
+    console.warn("[text-to-image-converter] 배경 삭제 실패:", e);
+  }
 }
 
 // 커스텀 배경이미지 로드
-function loadCustomBG(storageKey = getCustomBackgroundStorageKey()) {
-  const customBackgrounds = JSON.parse(localStorage.getItem(storageKey) || "{}");
+let _loadCustomBGId = 0;
+async function loadCustomBG(storageKey = getCustomBackgroundStorageKey()) {
+  const loadId = ++_loadCustomBGId;
   const gallery = $("#custom_background_gallery").empty();
-  Object.entries(customBackgrounds).forEach(([name, imageData]) => addBGtoGallery(name, imageData, storageKey));
+  try {
+    const db = await openBgDB();
+    if (loadId !== _loadCustomBGId) { db.close(); return; }
+    const tx = db.transaction(BG_STORE_NAME, "readonly");
+    const store = tx.objectStore(BG_STORE_NAME);
+    const prefix = `${storageKey}::`;
+    const req = store.openCursor();
+    req.onsuccess = function () {
+      const cursor = this.result;
+      if (!cursor) return;
+      if (loadId === _loadCustomBGId && cursor.key.startsWith(prefix)) {
+        const name = cursor.key.slice(prefix.length);
+        addBGtoGallery(name, cursor.value, storageKey);
+      }
+      cursor.continue();
+    };
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    db.close();
+  } catch (e) {
+    console.warn("[text-to-image-converter] 배경 로드 실패:", e);
+  }
 }
-function customBG() {
+async function customBG() {
   $("#bg_image_upload").on("change", uploadImage);
   $("#bg_url_btn").on("click", uploadImageFromURL);
-  loadCustomBG();
+  await migrateLocalStorageBgToIDB();
+  await loadCustomBG();
 }
 function uploadImageFromURL() {
   if (!isHtmlModeEnabled()) return;
@@ -1440,9 +1550,10 @@ function uploadImageFromURL() {
   const fileName = url.split('/').pop().split('?')[0] || 'url-image-' + Date.now();
   const storageKey = getCustomBackgroundStorageKey();
 
-  storeBackground(fileName, url, storageKey);
-  addBGtoGallery(fileName, url, storageKey);
-  $("#bg_image_url").val("");
+  storeBackground(fileName, url, storageKey).then(() => {
+    addBGtoGallery(fileName, url, storageKey);
+    $("#bg_image_url").val("");
+  });
 }
 function addBGtoGallery(name, imageData, storageKey = getCustomBackgroundStorageKey()) {
   const isSelected = getSelectedBackgroundForCurrentMode() === imageData;
@@ -1468,7 +1579,7 @@ function uploadImage(event) {
   const img = new Image();
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
-  img.onload = () => {
+  img.onload = async () => {
     const max_size = 800;
     let width = img.width;
     let height = img.height;
@@ -1483,7 +1594,7 @@ function uploadImage(event) {
     canvas.height = height;
     ctx.drawImage(img, 0, 0, width, height);
     const imageData = canvas.toDataURL('image/jpeg', 0.8);
-    storeBackground(file.name, imageData, storageKey);
+    await storeBackground(file.name, imageData, storageKey);
     addBGtoGallery(file.name, imageData, storageKey);
     $("#bg_image_upload").val("");
   };
@@ -1496,69 +1607,70 @@ function uploadImage(event) {
 function removeCustomBg(event) {
   event.stopPropagation();
   const bgItem = $(this).closest(".bg-image-item");
-  deleteBackground(bgItem.data("name"), bgItem.data("storage-key"));
-  bgItem.remove();
-  if (bgItem.hasClass("selected")) {
-    setSelectedBackgroundForCurrentMode(null);
-    saveSettings();
-    refreshPreview();
-  }
+  deleteBackground(bgItem.data("name"), bgItem.data("storage-key")).then(() => {
+    bgItem.remove();
+    if (bgItem.hasClass("selected")) {
+      setSelectedBackgroundForCurrentMode(null);
+      saveSettings();
+      refreshPreview();
+    }
+  });
 }
 
 // 배경 & 이미지 편집
 function useBackgroundColor(event) {
   extension_settings[extensionName].useBackgroundColor = event.target.checked;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function backgroundColor(event) {
   extension_settings[extensionName].backgroundColor = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function useSecondBackgroundColor(event) {
   extension_settings[extensionName].useSecondBackgroundColor = event.target.checked;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function secondBackgroundColor(event) {
   extension_settings[extensionName].secondBackgroundColor = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function addBlur(event) {
   extension_settings[extensionName].bgBlur = parseFloat(event.target.value);
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function brightness(event) {
   extension_settings[extensionName].bgBrightness = parseFloat(event.target.value);
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function hue(event) {
   extension_settings[extensionName].bgHue = parseFloat(event.target.value);
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function grayScale(event) {
   extension_settings[extensionName].bgGrayscale = parseFloat(event.target.value);
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function addNoise(event) {
   extension_settings[extensionName].bgNoise = parseInt(event.target.value);
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function addOverlay(event) {
   extension_settings[extensionName].overlayOpacity = parseFloat(event.target.value);
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function overlayColor(event) {
   extension_settings[extensionName].overlayColor = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function selectCanvasBG(event) {
@@ -1567,7 +1679,7 @@ function selectCanvasBG(event) {
   $(".bg-image-item").removeClass("selected");
   $(this).addClass("selected");
   setSelectedBackgroundForCurrentMode(path);
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function getCanvasSize() {
@@ -1587,23 +1699,23 @@ function getCanvasSize() {
 }
 function aspectRatio(event) {
   extension_settings[extensionName].imageRatio = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function bgFillMode(event) {
   extension_settings[extensionName].imageFillMode = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 
 // 단어 치환
 function letterCase(event) {
   extension_settings[extensionName].letterCase = event.target.checked;
-  saveSettings();
+  debouncedSaveSettings();
 }
 function unitControl(event) {
   extension_settings[extensionName].unitControl = event.target.checked;
-  saveSettings();
+  debouncedSaveSettings();
 }
 function setupWordReplacer() {
   let originalSnapshot = null;
@@ -1819,12 +1931,12 @@ function escapeRegExp(string) {
 // 텍스트 커스텀
 function strokeWidth(event) {
   extension_settings[extensionName].strokeWidth = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function lineBreak(event) {
   extension_settings[extensionName].lineBreak = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function fontSizeImage(event) {
@@ -1833,7 +1945,7 @@ function fontSizeImage(event) {
   if (!isHtmlModeEnabled()) {
     extension_settings[extensionName].fontSize = value;
   }
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function fontSizeHtml(event) {
@@ -1842,136 +1954,136 @@ function fontSizeHtml(event) {
   if (isHtmlModeEnabled()) {
     extension_settings[extensionName].fontSize = value;
   }
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function htmlFontFace(event) {
   extension_settings[extensionName].htmlFontFace = normalizeHtmlFontFace(event.target.value);
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function fontSpacing(event) {
   extension_settings[extensionName].fontSpacing = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function fontLineHeight(event) {
   extension_settings[extensionName].fontLineHeight = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function fontAlign(event) {
   extension_settings[extensionName].fontAlign = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function fontColor(event) {
   extension_settings[extensionName].fontColor = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function useItalicColor(event) {
   extension_settings[extensionName].useItalicColor = event.target.checked;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function italicFontColor(event) {
   extension_settings[extensionName].italicFontColor = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function useBoldColor(event) {
   extension_settings[extensionName].useBoldColor = event.target.checked;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function boldFontColor(event) {
   extension_settings[extensionName].boldFontColor = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function useBoldItalicColor(event) {
   extension_settings[extensionName].useBoldItalicColor = event.target.checked;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function boldItalicFontColor(event) {
   extension_settings[extensionName].boldItalicFontColor = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function useStrikethroughColor(event) {
   extension_settings[extensionName].useStrikethroughColor = event.target.checked;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function strikethroughFontColor(event) {
   extension_settings[extensionName].strikethroughFontColor = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function useUnderlineColor(event) {
   extension_settings[extensionName].useUnderlineColor = event.target.checked;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function underlineFontColor(event) {
   extension_settings[extensionName].underlineFontColor = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function blockquoteFontColor(event) {
   extension_settings[extensionName].blockquoteFontColor = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function blockquoteBgColor(event) {
   extension_settings[extensionName].blockquoteBgColor = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function blockquoteBorderColor(event) {
   extension_settings[extensionName].blockquoteBorderColor = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 // 바닥글
 function footerText(event) {
   extension_settings[extensionName].footerText = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function footerColor(event) {
   extension_settings[extensionName].footerColor = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function footerBgColor(event) {
   extension_settings[extensionName].footerBgColor = event.target.value;
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function footerLayoutMode(event) {
   extension_settings[extensionName].footerLayoutMode = event.target.value === "full" ? "full" : "scroll";
   updateFooterLayoutUIState();
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function footerWidth(event) {
   extension_settings[extensionName].footerWidth = parsePositiveInt(event.target.value, defaultSettings.footerWidth);
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 function footerHeight(event) {
   extension_settings[extensionName].footerHeight = parsePositiveInt(event.target.value, defaultSettings.footerHeight);
-  saveSettings();
+  debouncedSaveSettings();
   refreshPreview();
 }
 
 // 미리보기
 function autoPreview(event) {
   extension_settings[extensionName].autoPreview = event.target.checked;
-  saveSettings();
+  debouncedSaveSettings();
   if (event.target.checked) {
     refreshPreview();
   }
@@ -2027,6 +2139,7 @@ function renderPreviewContent() {
 
   updatePreviewDownloadAllButton(chunks.length);
 }
+const _debouncedRender = debounce(() => renderPreviewContent(), 150);
 function refreshPreview() {
   const autoPreviewEnabled = !!extension_settings[extensionName].autoPreview;
   const $refreshNotice = $(".refresh-preview");
@@ -2055,7 +2168,7 @@ function refreshPreview() {
     $refreshNotice.removeClass("shown");
   }
 
-  renderPreviewContent();
+  _debouncedRender();
 }
 function manualRefresh() {
   if (!extension_settings[extensionName].autoPreview) {
@@ -3406,10 +3519,10 @@ function autoDownload(allDLbuttons, delay = 1500) {
 }
 async function zipDL(DLbuttons) {
   if (typeof JSZip === 'undefined') {
-    await loadScript(JSZipCDN);
+    await loadScript(JSZipLocal, JSZipCDN);
   }
   if (typeof saveAs === 'undefined') {
-    await loadScript(FileSaverCDN);
+    await loadScript(FileSaverLocal, FileSaverCDN);
   }
 
   const zip = new JSZip();
@@ -3443,12 +3556,23 @@ async function zipDL(DLbuttons) {
     });
   });
 }
-function loadScript(src) {
+function loadScript(src, fallbackSrc) {
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = src;
     script.onload = resolve;
-    script.onerror = reject;
+    script.onerror = () => {
+      if (fallbackSrc) {
+        console.warn(`[text-to-image-converter] ${src} 로드 실패, fallback: ${fallbackSrc}`);
+        const fb = document.createElement('script');
+        fb.src = fallbackSrc;
+        fb.onload = resolve;
+        fb.onerror = reject;
+        document.head.appendChild(fb);
+      } else {
+        reject(new Error(`Script load failed: ${src}`));
+      }
+    };
     document.head.appendChild(script);
   });
 }
@@ -4375,7 +4499,7 @@ jQuery(async () => {
   await initSettings();
   presetUI();
   presetBackupSys();
-  customBG();
+  await customBG();
   setupWordReplacer();
   setupImageConvertButton();
   setupHtmlSwitcherInputs();
