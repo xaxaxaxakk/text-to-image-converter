@@ -3352,12 +3352,12 @@ function createHTMLSnippet(text, index) {
     isScrollFooterLayout ? `max-height:${footerHeightPx}px !important` : "max-height:none !important",
     "margin:0 auto !important",
     "padding:32px !important",
-    "border-radius:15px !important",
+    "border-radius:5px !important",
     "overflow:hidden !important",
     "isolation:isolate !important",
   ].join(";");
   const bgInlineStyle = [
-    "border-radius:15px !important",
+    "border-radius:5px !important",
     `background:${useBgColor ? colorBackground : "transparent"} !important`,
     `background-image:${bgLayerImage} !important`,
     "background-size:cover !important",
@@ -3366,7 +3366,7 @@ function createHTMLSnippet(text, index) {
     `filter:${bgFilter || "none"} !important`,
   ].join(";");
   const overlayInlineStyle = [
-    "border-radius:15px !important",
+    "border-radius:5px !important",
     `background:${toRGBA(settings.overlayColor || "#ffffff", overlayOpacity)} !important`,
     `-webkit-backdrop-filter:blur(${blurStrength}px) !important`,
     `backdrop-filter:blur(${blurStrength}px) !important`,
