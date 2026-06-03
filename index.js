@@ -18,6 +18,31 @@ function safeSetItem(key, value) {
 function safeRemoveItem(key) {
   try { localStorage.removeItem(key); } catch { }
 }
+function safeParseJSON(value, fallback) {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value);
+  } catch (e) {
+    console.warn("[text-to-image-converter] 저장된 JSON 파싱 실패:", e);
+    return fallback;
+  }
+}
+function fetchWithTimeout(url, options = {}, timeout = 6000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  return fetch(url, {...options, signal: controller.signal}).finally(() => clearTimeout(timer));
+}
+async function fetchExtensionResource(fileName) {
+  const response = await fetchWithTimeout(`${extensionFolderPath}/${fileName}`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response;
+}
+async function fetchExtensionText(fileName) {
+  return (await fetchExtensionResource(fileName)).text();
+}
+async function fetchExtensionJSON(fileName) {
+  return (await fetchExtensionResource(fileName)).json();
+}
 
 const debouncedSaveSettings = debounce(() => saveSettings(), 200);
 window.addEventListener("beforeunload", () => saveSettings());
@@ -336,7 +361,6 @@ async function initSettings() {
   $("#tti_ext_menu_shortcut").prop("checked", extMenuShortcut);
   $("#tti_mes_button_enabled").prop("checked", mesButtonEnabled);
 
-  await Promise.all([loadFonts(), loadBG(), loadBackgroundURLMap()]);
   highlighterTags();
   applyHtmlModeUIState();
   updateFooterLayoutUIState();
@@ -346,6 +370,13 @@ async function initSettings() {
   } else {
     refreshPreview();
   }
+  loadStartupAssets();
+}
+function loadStartupAssets() {
+  Promise.allSettled([loadFonts(), loadBG(), loadBackgroundURLMap()]).then(() => {
+    syncSelectedBackgroundUI();
+    refreshPreview();
+  });
 }
 
 // 프리셋
@@ -1256,29 +1287,77 @@ function crc32(data) {
 }
 
 // 폰트 패밀리
-function fontFamily(event) {
+async function fontFamily(event) {
   extension_settings[extensionName].fontFamily = event.target.value;
   debouncedSaveSettings();
+  await ensureFontFamilyLoaded(extension_settings[extensionName].fontFamily);
   refreshPreview();
+}
+
+const fontLoadCache = new Map();
+function getCSSFontFamily(fontFamily) {
+  return `"${String(fontFamily || defaultSettings.fontFamily).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+function getFontLoadDescriptor(fontFamily) {
+  return `1em ${getCSSFontFamily(fontFamily)}`;
+}
+async function ensureFontFamilyLoaded(fontFamily) {
+  if (!fontFamily || fontFamily === "useGlobal" || !document.fonts?.load) return;
+  const descriptor = getFontLoadDescriptor(fontFamily);
+  if (document.fonts.check?.(descriptor)) return;
+
+  if (!fontLoadCache.has(fontFamily)) {
+    const loadPromise = Promise.race([
+      document.fonts.load(descriptor),
+      new Promise((resolve) => setTimeout(resolve, 2500)),
+    ]).catch((error) => {
+      console.warn("[text-to-image-converter] 폰트 로드 대기 실패:", fontFamily, error);
+    }).finally(() => {
+      fontLoadCache.delete(fontFamily);
+    });
+    fontLoadCache.set(fontFamily, loadPromise);
+  }
+
+  await fontLoadCache.get(fontFamily);
+}
+async function ensurePreviewFontsLoaded() {
+  const settings = extension_settings[extensionName] || {};
+  const families = new Set([settings.fontFamily]);
+
+  (settings.setHighlighterTags || []).forEach((tag) => {
+    if (tag?.fontFamily && tag.fontFamily !== "useGlobal") {
+      families.add(tag.fontFamily);
+    }
+    if (tag?.htmlFontFamily && tag.htmlFontFamily !== "useGlobal") {
+      families.add(tag.htmlFontFamily);
+    }
+  });
+
+  await Promise.all(Array.from(families).map(ensureFontFamilyLoaded));
+}
+function warmupFonts(fonts) {
+  if (!document.fonts?.load || !Array.isArray(fonts)) return;
+  fonts.forEach((font, index) => {
+    setTimeout(() => {
+      ensureFontFamilyLoaded(font.value).catch(() => {});
+    }, index * 80);
+  });
 }
 
 // 폰트 로드
 async function loadFonts() {
   try {
-    const response = await fetch(`${extensionFolderPath}/font-family.json`);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const fonts = await response.json();
+    const fonts = await fetchExtensionJSON("font-family.json");
     fonts.sort((a, b) => a.label.localeCompare(b.label));
     const select = $("#tti_font_family").empty();
 
-    const fontPromises = fonts.map(font => document.fonts.load(`1em ${font.value}`).catch(() => {}));
-    await Promise.all(fontPromises);
-  
     fonts.forEach(font => {
       select.append(`<option value="${font.value}">${font.label}</option>`);
     });
 
     select.val(extension_settings[extensionName].fontFamily);
+    await ensureFontFamilyLoaded(extension_settings[extensionName].fontFamily);
+    warmupFonts(fonts);
     refreshPreview();
   } catch (e) {
     console.warn("[text-to-image-converter] 폰트 로드 실패:", e);
@@ -1392,9 +1471,7 @@ function applyHtmlModeUIState() {
 // 배경이미지 로드
 async function loadBackgroundURLMap() {
   try {
-    const response = await fetch(`${extensionFolderPath}/backgrounds-list-url.json`);
-    if (!response.ok) return;
-    const backgroundURLs = await response.json();
+    const backgroundURLs = await fetchExtensionJSON("backgrounds-list-url.json");
 
     defaultBackgroundUrlMap = new Map();
     defaultBackgroundBasenameMap = new Map();
@@ -1439,9 +1516,7 @@ function resolveBackgroundURLForHTML(backgroundValue) {
 }
 async function loadBG() {
   try {
-    const response = await fetch(`${extensionFolderPath}/backgrounds-list.json`);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const backgrounds = await response.json();
+    const backgrounds = await fetchExtensionJSON("backgrounds-list.json");
     const gallery = $("#background_image_gallery").empty();
     const selectedBackground = getSelectedBackgroundForCurrentMode();
     const galleryHtml = backgrounds.map((bg) => {
@@ -1484,7 +1559,7 @@ async function migrateLocalStorageBgToIDB() {
     const raw = safeGetItem(key);
     if (!raw) continue;
     try {
-      const entries = JSON.parse(raw);
+      const entries = safeParseJSON(raw, null);
       if (!entries || typeof entries !== "object") continue;
       const db = await openBgDB();
       const tx = db.transaction(BG_STORE_NAME, "readwrite");
@@ -2157,7 +2232,10 @@ function renderPreviewContent() {
 
   updatePreviewDownloadAllButton(chunks.length);
 }
-const _debouncedRender = debounce(() => renderPreviewContent(), 150);
+const _debouncedRender = debounce(async () => {
+  await ensurePreviewFontsLoaded();
+  renderPreviewContent();
+}, 150);
 function refreshPreview() {
   const autoPreviewEnabled = !!extension_settings[extensionName].autoPreview;
   const $refreshNotice = $(".refresh-preview");
@@ -2190,7 +2268,7 @@ function refreshPreview() {
 }
 function manualRefresh() {
   if (!extension_settings[extensionName].autoPreview) {
-    renderPreviewContent();
+    ensurePreviewFontsLoaded().then(renderPreviewContent);
   }
 }
 function renderPreviewForExtraction() {
@@ -2309,8 +2387,7 @@ function highlighterTags() {
   applyHtmlModeUIState();
 }
 async function highlighterFonts(fontOption, selectedFont) {
-  const fontFamilyName = await fetch(`${extensionFolderPath}/font-family.json`);
-  const fonts = await fontFamilyName.json();
+  const fonts = await fetchExtensionJSON("font-family.json");
   fonts.sort((a, b) => a.label.localeCompare(b.label));
   
   fontOption.empty();
@@ -2550,7 +2627,7 @@ function wrappingTexts(text, mode = "word") {
           ? span.fontFamily 
           : settings.fontFamily;
         const setFontSize = span.fontSize || fontSize;
-        ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${fontFamily}`;
+        ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${getCSSFontFamily(fontFamily)}`;
         ctx.letterSpacing = `${settings.fontSpacing}em`;
 
         let currentLineWidth = 0;
@@ -2559,12 +2636,12 @@ function wrappingTexts(text, mode = "word") {
           const itemFontStyle = item.italic ? "italic" : "normal";
           const itemFontFamily = item.fontFamily || settings.fontFamily;
           const itemFontSize = item.fontSize || fontSize;
-          ctx.font = `${itemFontStyle} ${itemFontWeight} ${itemFontSize}px ${itemFontFamily}`;
+          ctx.font = `${itemFontStyle} ${itemFontWeight} ${itemFontSize}px ${getCSSFontFamily(itemFontFamily)}`;
           ctx.letterSpacing = `${settings.fontSpacing}em`;
           currentLineWidth += ctx.measureText(item.text).width;
         });
         
-        ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${fontFamily}`;
+        ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${getCSSFontFamily(fontFamily)}`;
         ctx.letterSpacing = `${settings.fontSpacing}em`;
         const unitWidth = ctx.measureText(unit).width;
         
@@ -2708,7 +2785,7 @@ function generateTextImage(chunk, index) {
         ? span.fontFamily 
         : settings.fontFamily;
       const setFontSize = span.fontSize || fontSize;
-      ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${fontFamily}`;
+      ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${getCSSFontFamily(fontFamily)}`;
     }
 
     function renderSpan(span, x, y, drawMode = "both") {
@@ -3031,7 +3108,7 @@ function generateTextImage(chunk, index) {
     const footerText = settings.footerText;
     if (footerText) {
       const footerColor = settings.footerColor || "#000000";
-      ctx.font = "14px Pretendard-Regular";
+      ctx.font = `14px ${getCSSFontFamily("Pretendard-Regular")}`;
       ctx.fillStyle = footerColor;
       ctx.textAlign = "right";
       const footerY = calcHeight - 35;
@@ -4512,23 +4589,27 @@ function toggleExtMenuShortcutButton(show) {
 }
 
 jQuery(async () => {
-  const settingsHtml = await $.get(`${extensionFolderPath}/settings.html`);
-  $("#extensions_settings2").append(settingsHtml);
-  await initSettings();
-  presetUI();
-  presetBackupSys();
-  await customBG();
-  setupWordReplacer();
-  setupImageConvertButton();
-  setupHtmlSwitcherInputs();
-  bindingFunctions();
-  setupRangeValueTooltips();
-  restoreButtons();
-  tabButtons();
-  botCardButtons();
-  highlighterOption();
-  if (extension_settings[extensionName].extMenuShortcut) {
-    toggleExtMenuShortcutButton(true);
+  try {
+    const settingsHtml = await fetchExtensionText("settings.html");
+    $("#extensions_settings2").append(settingsHtml);
+    await initSettings();
+    presetUI();
+    presetBackupSys();
+    await customBG();
+    setupWordReplacer();
+    setupImageConvertButton();
+    setupHtmlSwitcherInputs();
+    bindingFunctions();
+    setupRangeValueTooltips();
+    restoreButtons();
+    tabButtons();
+    botCardButtons();
+    highlighterOption();
+    if (extension_settings[extensionName].extMenuShortcut) {
+      toggleExtMenuShortcutButton(true);
+    }
+  } catch (error) {
+    console.error("[text-to-image-converter] 초기화 실패:", error);
   }
 });
 
