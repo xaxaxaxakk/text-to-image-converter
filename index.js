@@ -75,6 +75,8 @@ const defaultSettings = {
   strikethroughFontColor: "#000000",
   useUnderlineColor: false,
   underlineFontColor: "#000000",
+  useQuotesColor: false,
+  quotesFontColor: "#000000",
   blockquoteFontColor: "#000000",
   blockquoteBgColor: "#ffffff",
   blockquoteBorderColor: "#000000",
@@ -277,6 +279,8 @@ async function initSettings() {
     strikethroughFontColor,
     useUnderlineColor,
     underlineFontColor,
+    useQuotesColor,
+    quotesFontColor,
     blockquoteFontColor,
     blockquoteBgColor,
     blockquoteBorderColor,
@@ -329,6 +333,8 @@ async function initSettings() {
   $("#tti_strikethrough_font_color").val(strikethroughFontColor);
   $("#use_underline_color").prop("checked", useUnderlineColor);
   $("#tti_underline_font_color").val(underlineFontColor);
+  $("#use_quotes_color").prop("checked", useQuotesColor);
+  $("#tti_quotes_font_color").val(quotesFontColor);
   $("#tti_blockquote_font_color").val(blockquoteFontColor || defaultSettings.blockquoteFontColor);
   $("#tti_blockquote_bg_color").val(blockquoteBgColor || defaultSettings.blockquoteBgColor);
   $("#tti_blockquote_border_color").val(blockquoteBorderColor || defaultSettings.blockquoteBorderColor);
@@ -531,6 +537,9 @@ function deletePreset() {
     $("#tti_strikethrough_font_color").val(defaultSettings.strikethroughFontColor);
     $("#use_underline_color").prop("checked", defaultSettings.useUnderlineColor);
     $("#tti_underline_font_color").val(defaultSettings.underlineFontColor);
+    $("#use_quotes_color").prop("checked", defaultSettings.useQuotesColor);
+    $("#tti_quotes_font_color").val(defaultSettings.quotesFontColor);
+    $("#tti_quotes_font_color").val(defaultSettings.quotesFontColor);
     $("#tti_blockquote_font_color").val(defaultSettings.blockquoteFontColor);
     $("#tti_blockquote_bg_color").val(defaultSettings.blockquoteBgColor);
     $("#tti_blockquote_border_color").val(defaultSettings.blockquoteBorderColor);
@@ -775,6 +784,12 @@ function applyPreset(presetName) {
         break;
       case "underlineFontColor":
         $("#tti_underline_font_color").val(value);
+        break;
+      case "useQuotesColor":
+        $("#use_quotes_color").prop("checked", value);
+        break;
+      case "quotesFontColor":
+        $("#tti_quotes_font_color").val(value);
         break;
       case "blockquoteFontColor":
         $("#tti_blockquote_font_color").val(value || defaultSettings.blockquoteFontColor);
@@ -2125,6 +2140,16 @@ function underlineFontColor(event) {
   debouncedSaveSettings();
   refreshPreview();
 }
+function useQuotesColor(event) {
+  extension_settings[extensionName].useQuotesColor = event.target.checked;
+  saveSettings();
+  refreshPreview();
+}
+function quotesFontColor(event) {
+  extension_settings[extensionName].quotesFontColor = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
 function blockquoteFontColor(event) {
   extension_settings[extensionName].blockquoteFontColor = event.target.value;
   debouncedSaveSettings();
@@ -2454,6 +2479,7 @@ function enableMarkdown(text, options = {}) {
 
   const setHighlighterTags = extension_settings[extensionName].setHighlighterTags || [];
   const tagMap = {};
+  const quotePairs = {'"': '"', '“': '”', '「': '」', '『': '』'};
   setHighlighterTags.forEach(tag => {
     if (tag.name) tagMap[tag.name.toLowerCase()] = tag;
   });
@@ -2501,6 +2527,26 @@ function enableMarkdown(text, options = {}) {
       }
     }
     
+    if (quotePairs[sourceText[i]]) {
+      const openChar = sourceText[i];
+      const closeChar = quotePairs[openChar];
+      const closeIndex = sourceText.indexOf(closeChar, i + 1);
+      if (closeIndex !== -1) {
+        if (currentText) {
+          spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
+          currentText = "";
+        }
+        const innerText = sourceText.slice(i + 1, closeIndex);
+        const innerSpans = enableMarkdown(innerText, {allowHeading: false});
+
+        spans.push({text: openChar, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null, quote: true});
+        innerSpans.forEach((innerSpan) => spans.push({...innerSpan, quote: true}));
+        spans.push({text: closeChar, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null, quote: true});
+
+        i = closeIndex + 1;
+        continue;
+      }
+    }
     if (sourceText.slice(i, i + 3) === "***") {
       if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
       bold = !bold;
@@ -2657,6 +2703,7 @@ function wrappingTexts(text, mode = "word") {
             fontFamily: span.fontFamily,
             fontSize: span.fontSize,
             strokeWidth: span.strokeWidth,
+            quote: span.quote,
           });
         } else {
           if (currentLine.length) {
@@ -2681,6 +2728,7 @@ function wrappingTexts(text, mode = "word") {
             fontFamily: span.fontFamily,
             fontSize: span.fontSize,
             strokeWidth: span.strokeWidth,
+            quote: span.quote,
           }];
         }
       });
@@ -2809,7 +2857,9 @@ function generateTextImage(chunk, index) {
       if (span.fontColor) {
         textColor = span.fontColor;
       } else {
-        if (span.strikethrough && settings.useStrikethroughColor) {
+        if (span.quote && settings.useQuotesColor) {
+          textColor = settings.quotesFontColor || textColor;
+        } else if (span.strikethrough && settings.useStrikethroughColor) {
           textColor = settings.strikethroughFontColor || textColor;
         } else if (span.underline && settings.useUnderlineColor) {
           textColor = settings.underlineFontColor || textColor;
@@ -3253,7 +3303,9 @@ function getSpanColor(span, settings) {
   if (span.fontColor) {
     textColor = span.fontColor;
   } else {
-    if (span.strikethrough && settings.useStrikethroughColor) {
+    if (span.quote && settings.useQuotesColor) {
+      textColor = settings.quotesFontColor || textColor;
+    } else if (span.strikethrough && settings.useStrikethroughColor) {
       textColor = settings.strikethroughFontColor || textColor;
     } else if (span.underline && settings.useUnderlineColor) {
       textColor = settings.underlineFontColor || textColor;
@@ -4640,6 +4692,8 @@ function bindingFunctions() {
   $("#tti_strikethrough_font_color").on("change", strikethroughFontColor);
   $("#use_underline_color").on("change", useUnderlineColor);
   $("#tti_underline_font_color").on("change", underlineFontColor);
+  $("#use_quotes_color").on("change", useQuotesColor);
+  $("#tti_quotes_font_color").on("change", quotesFontColor);
   $("#tti_blockquote_font_color").on("change", blockquoteFontColor);
   $("#tti_blockquote_bg_color").on("change", blockquoteBgColor);
   $("#tti_blockquote_border_color").on("change", blockquoteBorderColor);
