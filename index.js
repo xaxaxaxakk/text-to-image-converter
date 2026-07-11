@@ -1,4 +1,4 @@
-﻿import {extension_settings} from "../../../extensions.js";
+import {extension_settings} from "../../../extensions.js";
 import {saveSettings} from "../../../../script.js";
 
 function debounce(fn, delay) {
@@ -4651,7 +4651,10 @@ function toggleExtMenuShortcutButton(show) {
 jQuery(async () => {
   try {
     const settingsHtml = await fetchExtensionText("settings.html");
-    $("#extensions_settings2").append(settingsHtml);
+    $("body").append(settingsHtml);
+    if (!$("#tti_popup_backdrop").length) {
+      $("body").append('<div id="tti_popup_backdrop"></div>');
+    }
     await initSettings();
     presetUI();
     presetBackupSys();
@@ -4665,6 +4668,7 @@ jQuery(async () => {
     tabButtons();
     botCardButtons();
     highlighterOption();
+    setupSettingsPopup();
     if (extension_settings[extensionName].extMenuShortcut) {
       toggleExtMenuShortcutButton(true);
     }
@@ -4672,6 +4676,35 @@ jQuery(async () => {
     console.error("[text-to-image-converter] 초기화 실패:", error);
   }
 });
+
+function setupSettingsPopup() {
+  const $popup = $(".text-to-image-converter-settings");
+  const $backdrop = $("#tti_popup_backdrop");
+
+  const openSettingsPopup = () => {
+    $popup.addClass("tti-popup-open");
+    $backdrop.addClass("tti-popup-open");
+  };
+  const closeSettingsPopup = () => {
+    $popup.removeClass("tti-popup-open");
+    $backdrop.removeClass("tti-popup-open");
+  };
+
+  if (!$("#tti_ext_settings_open").length) {
+    const $openBtn = $("<a>")
+      .attr({ id: "tti_ext_settings_open", role: "listitem", tabindex: "0" })
+      .addClass("list-group-item flex-container flexGap5 interactable")
+      .html(`<i class="fa-solid fa-image"></i><span>로그 발췌</span>`)
+      .on("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openSettingsPopup();
+      });
+    $("#extensionsMenu").append($openBtn);
+  }
+
+  $popup.find("#tti_popup_close_btn").on("click", closeSettingsPopup);
+}
 
 function bindingFunctions() {
   $("#tti_font_family").on("change", fontFamily);
