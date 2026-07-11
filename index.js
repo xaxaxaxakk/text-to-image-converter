@@ -113,6 +113,7 @@ const defaultSettings = {
   dragOnlyFloat: true,
   extMenuShortcut: false,
   mesButtonEnabled: true,
+  autoOrganize: false,
 };
 let defaultBackgroundUrlMap = new Map();
 let defaultBackgroundBasenameMap = new Map();
@@ -313,6 +314,7 @@ async function initSettings() {
     dragOnlyFloat,
     extMenuShortcut,
     mesButtonEnabled,
+    autoOrganize,
   } = extension_settings[extensionName];
 
   $("#tti_font_family").val(fontFamily);
@@ -366,6 +368,7 @@ async function initSettings() {
   $("#tti_drag_only_float").prop("checked", dragOnlyFloat);
   $("#tti_ext_menu_shortcut").prop("checked", extMenuShortcut);
   $("#tti_mes_button_enabled").prop("checked", mesButtonEnabled);
+  $("#tti_auto_organize").prop("checked", autoOrganize);
 
   highlighterTags();
   applyHtmlModeUIState();
@@ -402,6 +405,7 @@ function getPresetSettings() {
   delete settings.dragOnlyFloat;
   delete settings.mesButtonEnabled;
   delete settings.extMenuShortcut;
+  delete settings.autoOrganize;
   const imageFontSize = parseInt($("#tti_font_size_image").val(), 10);
   const htmlFontSize = parseInt($("#tti_font_size_html").val(), 10);
   settings.fontSizeImage = Number.isFinite(imageFontSize) ? imageFontSize : (settings.fontSizeImage || defaultSettings.fontSizeImage);
@@ -510,6 +514,7 @@ function deletePreset() {
     const _dragOnlyFloat = extension_settings[extensionName].dragOnlyFloat;
     const _mesButtonEnabled = extension_settings[extensionName].mesButtonEnabled;
     const _extMenuShortcut = extension_settings[extensionName].extMenuShortcut;
+    const _autoOrganize = extension_settings[extensionName].autoOrganize;
     extension_settings[extensionName] = {
       ...defaultSettings,
       presets: extension_settings[extensionName].presets,
@@ -517,6 +522,7 @@ function deletePreset() {
       dragOnlyFloat: _dragOnlyFloat,
       mesButtonEnabled: _mesButtonEnabled,
       extMenuShortcut: _extMenuShortcut,
+      autoOrganize: _autoOrganize,
     };
 
     $("#tti_font_family").val(defaultSettings.fontFamily);
@@ -601,6 +607,7 @@ function selectPreset() {
     const _dragOnlyFloat = extension_settings[extensionName].dragOnlyFloat;
     const _mesButtonEnabled = extension_settings[extensionName].mesButtonEnabled;
     const _extMenuShortcut = extension_settings[extensionName].extMenuShortcut;
+    const _autoOrganize = extension_settings[extensionName].autoOrganize;
     extension_settings[extensionName] = {
       ...defaultSettings,
       presets: extension_settings[extensionName].presets,
@@ -608,6 +615,7 @@ function selectPreset() {
       dragOnlyFloat: _dragOnlyFloat,
       mesButtonEnabled: _mesButtonEnabled,
       extMenuShortcut: _extMenuShortcut,
+      autoOrganize: _autoOrganize,
     };
 
     if (currentCustomFont) {
@@ -723,6 +731,7 @@ function applyPreset(presetName) {
         "dragOnlyFloat",
         "mesButtonEnabled",
         "extMenuShortcut",
+        "autoOrganize",
       ].includes(key)
     ) {
       continue;
@@ -4287,6 +4296,7 @@ function setupImageConvertButton() {
         e.preventDefault();
         e.stopPropagation();
         onClick();
+        openSettingsPopup();
       });
   }
 
@@ -4506,7 +4516,10 @@ function setExtractText(text, options = {}) {
     refreshPreview();
   };
 
-  $("#text_to_image").val(text);
+  const finalText = extension_settings[extensionName]?.autoOrganize
+    ? organizeDialogueText(text)
+    : text;
+  $("#text_to_image").val(finalText);
 
   if (currentCustomFont) {
     extension_settings[extensionName].fontFamily = currentCustomFont;
@@ -4677,19 +4690,17 @@ jQuery(async () => {
   }
 });
 
+function openSettingsPopup() {
+  $(".text-to-image-converter-settings").addClass("tti-popup-open");
+  $("#tti_popup_backdrop").addClass("tti-popup-open");
+}
+
+function closeSettingsPopup() {
+  $(".text-to-image-converter-settings").removeClass("tti-popup-open");
+  $("#tti_popup_backdrop").removeClass("tti-popup-open");
+}
+
 function setupSettingsPopup() {
-  const $popup = $(".text-to-image-converter-settings");
-  const $backdrop = $("#tti_popup_backdrop");
-
-  const openSettingsPopup = () => {
-    $popup.addClass("tti-popup-open");
-    $backdrop.addClass("tti-popup-open");
-  };
-  const closeSettingsPopup = () => {
-    $popup.removeClass("tti-popup-open");
-    $backdrop.removeClass("tti-popup-open");
-  };
-
   if (!$("#tti_ext_settings_open").length) {
     const $openBtn = $("<a>")
       .attr({ id: "tti_ext_settings_open", role: "listitem", tabindex: "0" })
@@ -4703,7 +4714,7 @@ function setupSettingsPopup() {
     $("#extensionsMenu").append($openBtn);
   }
 
-  $popup.find("#tti_popup_close_btn").on("click", closeSettingsPopup);
+  $(".text-to-image-converter-settings").find("#tti_popup_close_btn").on("click", closeSettingsPopup);
 }
 
 function bindingFunctions() {
@@ -4777,6 +4788,11 @@ function bindingFunctions() {
     const checked = $(this).prop("checked");
     extension_settings[extensionName].extMenuShortcut = checked;
     toggleExtMenuShortcutButton(checked);
+    saveSettings();
+  });
+  $("#tti_auto_organize").on("change", function () {
+    const checked = $(this).prop("checked");
+    extension_settings[extensionName].autoOrganize = checked;
     saveSettings();
   });
   $("#tti_mes_button_enabled").on("change", function () {
