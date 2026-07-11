@@ -389,7 +389,6 @@
   }
   & .text-field-buttons {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     width: 100%;
     height: 35px;
@@ -407,8 +406,16 @@
     transition: all 0.3s;
     gap: 8px;
   }
+  & #organize_text_btn {
+    width: 80px;
+    height: 35px;
+    font-size: 12px;
+  }
   & #clear_text_btn:hover {
     background: #ff6f61;
+  }
+  & #restore_text_btn {
+    margin-left: auto;
   }
 
   /* 옵션 카테고리 */
