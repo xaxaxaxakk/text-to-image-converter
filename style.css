@@ -51,20 +51,20 @@
     display: none;
     position: fixed;
     top: 0;
-    left: 0;
     right: 0;
     bottom: 0;
+    left: 0;
+    z-index: 99999 !important;
     width: 100vw;
     width: 100dvw;
     height: 100vh;
     height: 100dvh;
     max-width: none;
     max-height: none;
-    z-index: 99999 !important;
-    grid-template-rows: 58px minmax(0, 1fr);
     background: var(--ui-canvas);
     color: var(--ui-text);
     font-family: "Pretendard-Regular", "Noto Sans KR", sans-serif;
+    grid-template-rows: 58px minmax(0, 1fr);
     touch-action: pan-y;
     overscroll-behavior: contain;
 }
@@ -83,19 +83,19 @@
 
 /* ---------- 헤더 ---------- */
 .tti-editor-header {
+    display: grid;
+    align-items: center;
     position: relative;
     z-index: 3;
-    display: grid;
-    grid-template-columns: 44px 1fr auto;
-    align-items: center;
     padding: 0 14px;
-    border-bottom: 1px solid var(--ui-border);
     background: var(--ui-panel);
+    grid-template-columns: 44px 1fr auto;
+    border-bottom: 1px solid var(--ui-border);
 }
 .tti-editor-title {
     margin: 0;
     color: var(--ui-text) !important;
-    font-size: 16px;
+    font-size: 16px !important;
     font-weight: 800;
     text-align: center;
 }
@@ -107,13 +107,13 @@
 .tti-popup-close-btn,
 .tti-header-btn {
     display: grid;
-    place-items: center;
     width: 38px;
     height: 38px;
     border-radius: 10px;
     color: var(--ui-text-soft) !important;
     cursor: pointer;
     transition: 0.15s ease;
+    place-items: center;
 }
 .tti-popup-close-btn:hover,
 .tti-header-btn:hover {
@@ -124,9 +124,9 @@
 /* ---------- 레이아웃 ---------- */
 .tti-editor-body {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 440px;
     min-height: 0;
     overflow: hidden;
+    grid-template-columns: minmax(0, 1fr) 440px;
 }
 .tti-preview-pane,
 .tti-editor-controls {
@@ -148,20 +148,20 @@
 }
 .tti-editor-controls {
     padding-bottom: 48px;
-    border-left: 1px solid var(--ui-border);
     background: var(--ui-panel);
+    border-left: 1px solid var(--ui-border);
 }
 
 /* ---------- 미리보기 ---------- */
 .tti-preview-pane h4 {
     display: flex;
     align-items: center;
-    gap: 10px;
     margin: 0 0 14px !important;
     color: var(--ui-text-muted) !important;
     font-size: 11px !important;
     font-weight: 800;
     letter-spacing: 0.04em;
+    gap: 10px;
 }
 .tti-preview-pane h4 .tti-stage-label {
     display: inline-flex;
@@ -170,7 +170,6 @@
 }
 .refresh-preview {
     display: grid;
-    place-items: center;
     width: 30px;
     height: 30px;
     border: 1px solid var(--ui-border);
@@ -178,6 +177,7 @@
     background: var(--ui-surface-raised);
     color: var(--ui-text-soft) !important;
     cursor: pointer;
+    place-items: center;
 }
 .refresh-preview:hover {
     border-color: var(--ui-accent);
@@ -205,7 +205,7 @@
     border-radius: 999px;
     background: var(--ui-surface-raised);
     color: var(--ui-text-soft) !important;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 700;
     cursor: pointer;
 }
@@ -215,27 +215,27 @@
 }
 
 .tti-preview-stage {
-    position: relative;
     display: grid;
     flex: 1 1 auto;
-    place-items: center;
+    position: relative;
     min-height: 0;
     padding: 0 56px 34px;
+    place-items: center;
     touch-action: pan-y;
 }
 .image-preview {
     display: grid;
-    place-items: center;
     width: 100%;
+    place-items: center;
 }
 .image-preview:empty::after {
-    content: "미리보기가 없습니다";
     display: grid;
-    place-items: center;
     width: 100%;
     min-height: 200px;
     color: var(--ui-text-muted);
-    font-size: 13px;
+    font-size: 13px !important;
+    content: "미리보기가 없습니다";
+    place-items: center;
 }
 .image-preview-item {
     display: none;
@@ -246,10 +246,9 @@
     display: block;
 }
 .tti-preview-arrow {
+    display: none;
     position: absolute;
     top: 50%;
-    display: none;
-    place-items: center;
     width: 42px;
     height: 42px;
     padding: 0;
@@ -257,10 +256,11 @@
     border-radius: 50%;
     background: var(--ui-surface-raised) !important;
     color: var(--ui-text) !important;
-    box-shadow: var(--ui-shadow-soft);
-    transform: translateY(-50%);
     cursor: pointer;
     transition: 0.15s ease;
+    transform: translateY(-50%);
+    place-items: center;
+    box-shadow: var(--ui-shadow-soft);
 }
 .tti-preview-stage.has-multiple .tti-preview-arrow {
     display: grid;
@@ -280,17 +280,17 @@
     cursor: default;
 }
 .tti-preview-count {
+    display: none;
     position: absolute;
     bottom: 2px;
     left: 50%;
-    display: none;
     padding: 4px 10px;
     border-radius: 999px;
     background: var(--ui-surface-raised);
     color: var(--ui-text-muted);
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
+    font-size: 11px !important;
     transform: translateX(-50%);
+    font-variant-numeric: tabular-nums;
 }
 .tti-preview-stage.has-multiple .tti-preview-count {
     display: block;
@@ -310,11 +310,11 @@
 .html-render-preview {
     display: block;
     width: 100%;
-    margin: 0 auto;
     max-height: min(60dvh, 620px);
+    margin: 0 auto;
     padding: 0;
-    overflow-y: auto;
     border-radius: 10px;
+    overflow-y: auto;
 }
 .download-btn {
     position: absolute;
@@ -325,10 +325,10 @@
     border-radius: 999px;
     background: rgba(20, 20, 24, 0.72);
     color: #fff !important;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 700;
-    cursor: pointer;
     opacity: 0.82;
+    cursor: pointer;
     transition: 0.15s ease;
 }
 .image-preview-item:hover .download-btn,
@@ -336,8 +336,8 @@
     opacity: 1;
 }
 .html-preview-item .download-btn {
-    position: static;
     display: block;
+    position: static;
     width: 150px;
     margin: 10px auto 0;
     opacity: 1;
@@ -349,8 +349,9 @@
 }
 :is(.text-to-image-converter-settings, .tti-modal-backdrop) .tti-select-trigger {
     display: block !important;
-    min-width: 0 !important;
+    position: relative !important;
     height: 38px !important;
+    min-width: 0 !important;
     padding: 0 32px 0 12px !important;
     border: 1px solid var(--ui-border-strong) !important;
     border-radius: 10px !important;
@@ -359,17 +360,16 @@
     font-size: 13px !important;
     text-align: left !important;
     overflow: hidden !important;
+    cursor: pointer !important;
     white-space: nowrap !important;
     text-overflow: ellipsis !important;
-    cursor: pointer !important;
-    position: relative !important;
 }
 .tti-select-trigger::after {
-    font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "Font Awesome 5 Free", "Font Awesome 5 Pro", FontAwesome !important;
-    content: "\f0d7";
     position: absolute;
     right: 12px;
     color: var(--ui-text-muted);
+    font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "Font Awesome 5 Free", "Font Awesome 5 Pro", FontAwesome !important;
+    content: "\f0d7";
 }
 .tti-field > .tti-select-trigger {
     flex: 0 1 230px;
@@ -383,12 +383,12 @@
 .tti-select-menu {
     position: fixed !important;
     z-index: 100010 !important;
-    overflow: auto !important;
     padding: 5px !important;
     border: 1px solid var(--ui-border-strong) !important;
     border-radius: 12px !important;
     background: var(--ui-panel) !important;
     color: var(--ui-text) !important;
+    overflow: auto !important;
     box-shadow: var(--ui-shadow) !important;
     box-sizing: border-box !important;
     scrollbar-width: thin;
@@ -402,12 +402,12 @@
     border-radius: 7px !important;
     background: transparent !important;
     color: var(--ui-text-soft) !important;
+    text-align: left !important;
+    cursor: pointer !important;
     font:
         13px/1.5 "Pretendard-Regular",
         sans-serif !important;
-    text-align: left !important;
     text-shadow: none !important;
-    cursor: pointer !important;
 }
 .tti-select-menu button:is(:hover, :focus-visible, [aria-selected="true"]) {
     background: var(--ui-hover) !important;
@@ -424,14 +424,14 @@
 }
 
 :is(.text-to-image-converter-settings, .tti-modal-backdrop) :is(input, select, textarea, button) {
-    box-sizing: border-box !important;
-    text-shadow: none !important;
     font-family: "Pretendard-Regular", "Noto Sans KR", sans-serif !important;
     letter-spacing: normal !important;
+    box-sizing: border-box !important;
+    text-shadow: none !important;
 }
 :is(.text-to-image-converter-settings, .tti-modal-backdrop) :is(input[type="text"], input[type="number"], select) {
-    min-width: 0 !important;
     height: 38px !important;
+    min-width: 0 !important;
     margin: 0 !important;
     padding: 0 12px !important;
     border: 1px solid var(--ui-border-strong) !important;
@@ -445,12 +445,12 @@
     outline: none !important;
 }
 :is(.text-to-image-converter-settings, .tti-modal-backdrop) select {
-    appearance: none !important;
     padding-right: 32px !important;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%239099a5' stroke-width='2'/%3E%3C/svg%3E") !important;
-    background-repeat: no-repeat !important;
     background-position: right 12px center !important;
+    background-repeat: no-repeat !important;
     cursor: pointer !important;
+    appearance: none !important;
 }
 :is(.text-to-image-converter-settings, .tti-modal-backdrop) :is(option, optgroup) {
     background: var(--ui-panel) !important;
@@ -458,34 +458,33 @@
     font-size: 13px !important;
 }
 :is(.text-to-image-converter-settings, .tti-modal-backdrop) input[type="checkbox"] {
-    appearance: none !important;
     display: inline-grid !important;
-    place-content: center !important;
+    flex: 0 0 17px !important;
     width: 17px !important;
     height: 17px !important;
-    flex: 0 0 17px !important;
     margin: 0 !important;
     padding: 0 !important;
     border: 1px solid var(--ui-border-strong) !important;
     border-radius: 5px !important;
     background: var(--ui-surface) !important;
-    box-shadow: none !important;
     cursor: pointer !important;
+    appearance: none !important;
+    place-content: center !important;
+    box-shadow: none !important;
 }
 :is(.text-to-image-converter-settings, .tti-modal-backdrop) input[type="checkbox"]:checked {
-    background: var(--ui-accent) !important;
     border-color: var(--ui-accent) !important;
+    background: var(--ui-accent) !important;
 }
 :is(.text-to-image-converter-settings, .tti-modal-backdrop) input[type="checkbox"]:checked::after {
-    content: "" !important;
     width: 8px !important;
     height: 4px !important;
     border: solid var(--ui-on-accent) !important;
     border-width: 0 0 2px 2px !important;
     transform: translateY(-1px) rotate(-45deg) !important;
+    content: "" !important;
 }
 :is(.text-to-image-converter-settings, .tti-modal-backdrop) input[type="color"] {
-    appearance: none !important;
     width: 36px !important;
     height: 30px !important;
     margin: 0 !important;
@@ -494,6 +493,7 @@
     border-radius: 8px !important;
     background: var(--ui-surface) !important;
     cursor: pointer !important;
+    appearance: none !important;
 }
 :is(.text-to-image-converter-settings, .tti-modal-backdrop) input[type="color"]::-webkit-color-swatch-wrapper {
     padding: 0 !important;
@@ -520,17 +520,17 @@
 .tti-control-section > h3 {
     display: flex;
     align-items: center;
-    gap: 10px;
     margin: 0 0 12px !important;
     color: var(--ui-text-muted) !important;
     font-size: 11px !important;
     font-weight: 800;
     letter-spacing: 0.04em;
+    gap: 10px;
 }
 .tti-section-desc {
     margin: -4px 0 14px;
     color: var(--ui-text-muted);
-    font-size: 12px;
+    font-size: 12px !important;
     line-height: 1.7;
 }
 .tti-section-desc b {
@@ -540,15 +540,15 @@
 /* ---------- 토글 리스트 ---------- */
 .tti-option-label {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    gap: 14px;
+    align-items: center;
     min-height: 54px;
     margin: 0;
-    border-bottom: 1px solid var(--ui-border);
     color: var(--ui-text) !important;
-    font-size: 13px;
+    font-size: 13px !important;
     cursor: pointer;
+    gap: 14px;
+    border-bottom: 1px solid var(--ui-border);
 }
 .tti-option-label:last-child {
     border-bottom: 0;
@@ -559,8 +559,8 @@
     pointer-events: none;
 }
 .tti-toggle-slider {
-    position: relative;
     flex: 0 0 auto;
+    position: relative;
     width: 44px;
     height: 24px;
     border-radius: 999px;
@@ -575,8 +575,8 @@
     height: 18px;
     border-radius: 50%;
     background: var(--ui-surface-raised);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.24);
     transition: 0.18s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.24);
 }
 .tti-option-label > input:checked ~ .tti-toggle-slider {
     background: var(--ui-accent);
@@ -598,7 +598,6 @@
 .tti-primary-btn {
     display: flex;
     align-items: center;
-    gap: 10px;
     width: 100%;
     min-height: 52px;
     padding: 0 18px;
@@ -606,10 +605,11 @@
     border-radius: 12px;
     background: var(--ui-accent);
     color: var(--ui-on-accent) !important;
-    font-size: 14px;
+    font-size: 14px !important;
     font-weight: 800;
     cursor: pointer;
     transition: 0.15s ease;
+    gap: 10px;
 }
 .tti-primary-button-row .tti-primary-btn {
     flex: 1 1 auto;
@@ -620,27 +620,27 @@
 }
 .tti-primary-btn em {
     margin-left: auto;
-    font-style: normal;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 700;
     opacity: 0.7;
+    font-style: normal;
 }
 .tti-secondary-btn {
     display: inline-flex;
-    align-items: center;
-    justify-content: center;
     flex: 0 0 auto;
-    gap: 7px;
+    justify-content: center;
+    align-items: center;
     min-height: 52px;
     padding: 0 14px;
     border: 1px solid var(--ui-border-strong) !important;
     border-radius: 12px;
     background: var(--ui-surface) !important;
     color: var(--ui-text-soft) !important;
-    font-size: 13px;
+    font-size: 13px !important;
     font-weight: 800;
     cursor: pointer;
     transition: 0.15s ease;
+    gap: 7px;
 }
 .tti-secondary-btn:hover {
     border-color: var(--ui-accent) !important;
@@ -648,18 +648,18 @@
 }
 .tti-wide-btn {
     display: flex;
-    align-items: center;
     justify-content: center;
-    gap: 8px;
+    align-items: center;
     width: 100%;
     min-height: 46px;
     border: 1px solid var(--ui-border-strong) !important;
     border-radius: 11px;
     background: var(--ui-surface) !important;
     color: var(--ui-text-soft) !important;
-    font-size: 13px;
+    font-size: 13px !important;
     font-weight: 700;
     cursor: pointer;
+    gap: 8px;
 }
 .tti-wide-btn:hover {
     border-color: var(--ui-accent) !important;
@@ -673,10 +673,10 @@
 .tti-mode-switches .tti-html-switch {
     display: flex !important;
     align-items: center !important;
-    gap: 10px !important;
-    background: transparent !important;
     border: 0 !important;
+    background: transparent !important;
     color: var(--ui-text-soft) !important;
+    gap: 10px !important;
 }
 .tti-mode-switches .tti-html-switch > span {
     display: inline-flex;
@@ -700,10 +700,9 @@
 }
 .tti-mode-switches label {
     display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
     flex: 1;
+    justify-content: center;
+    align-items: center;
     min-height: 40px;
     margin: 0;
     padding: 0 12px;
@@ -711,11 +710,12 @@
     border-radius: 10px;
     background: var(--ui-surface);
     color: var(--ui-text-muted) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     font-weight: 700;
-    white-space: nowrap;
     cursor: pointer;
     transition: 0.15s ease;
+    gap: 7px;
+    white-space: nowrap;
 }
 .tti-mode-switches input:checked + label {
     border-color: var(--ui-accent);
@@ -725,7 +725,7 @@
 
 .how_to_use_box {
     color: var(--ui-text-soft) !important;
-    font-size: 12.5px;
+    font-size: 12.5px !important;
     line-height: 1.85;
 }
 .how_to_use_box > span {
@@ -739,14 +739,13 @@
 /* ---------- 배경 피커 ---------- */
 .background-picker {
     display: grid;
-    grid-template-columns: 92px minmax(0, 1fr);
     align-items: flex-start;
     padding: 16px 0;
+    grid-template-columns: 92px minmax(0, 1fr);
     border-bottom: 1px solid var(--ui-border);
 }
 .background-camera {
     display: grid;
-    place-items: center;
     width: 74px;
     height: 74px;
     margin: 0 0 0 16px;
@@ -754,8 +753,9 @@
     border-radius: 14px;
     background: var(--ui-surface);
     color: var(--ui-text-muted) !important;
-    font-size: 18px;
+    font-size: 18px !important;
     cursor: pointer;
+    place-items: center;
 }
 .background-camera:hover {
     border-color: var(--ui-accent);
@@ -763,10 +763,10 @@
 }
 .background-scroll {
     display: flex;
-    gap: 10px;
     min-width: 0;
-    overflow-x: auto;
     padding: 0 18px 6px 2px;
+    gap: 10px;
+    overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x;
     scrollbar-width: thin;
@@ -775,16 +775,16 @@
     display: contents !important;
 }
 .bg-image-item {
-    position: relative;
     flex: 0 0 74px !important;
+    position: relative;
     width: 74px !important;
-    min-width: 74px !important;
     height: 74px !important;
+    min-width: 74px !important;
     padding: 0 !important;
-    overflow: hidden;
     border: 2px solid transparent;
     border-radius: 14px;
     background: var(--ui-surface);
+    overflow: hidden;
     cursor: pointer;
 }
 .bg-image-item img {
@@ -802,20 +802,20 @@
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--ui-accent) 20%, transparent);
 }
 .bg-image-item .delete-bg-btn {
+    display: grid;
     position: absolute;
     top: 3px;
     right: 3px;
-    display: grid;
-    place-items: center;
     width: 20px;
     height: 20px;
     border-radius: 50%;
     background: rgba(20, 20, 24, 0.72);
     color: #fff !important;
-    font-size: 13px;
+    font-size: 13px !important;
     line-height: 1;
     opacity: 0;
     transition: 0.15s ease;
+    place-items: center;
 }
 .bg-image-item:hover .delete-bg-btn {
     opacity: 1;
@@ -826,15 +826,15 @@
 .text-to-image-converter-settings input[type="text"],
 .text-to-image-converter-settings input[type="number"],
 .tti-modal input[type="text"] {
-    min-width: 0;
     height: 40px;
+    min-width: 0;
     padding: 0 12px;
     border: 1px solid var(--ui-border-strong) !important;
     border-radius: 10px;
-    outline: 0;
     background: var(--ui-surface) !important;
     color: var(--ui-text) !important;
-    font-size: 13px;
+    font-size: 13px !important;
+    outline: 0;
 }
 .text-to-image-converter-settings select:focus,
 .text-to-image-converter-settings input[type="text"]:focus,
@@ -860,10 +860,10 @@
 
 .tti-field {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    gap: 14px;
+    align-items: center;
     min-height: 52px;
+    gap: 14px;
     border-bottom: 1px solid var(--ui-border);
 }
 .tti-control-section .tti-field:last-child {
@@ -872,7 +872,7 @@
 .tti-field > span:first-child {
     flex: 0 0 auto;
     color: var(--ui-text-soft) !important;
-    font-size: 13px;
+    font-size: 13px !important;
 }
 .tti-field > select,
 .tti-field > input[type="text"],
@@ -900,28 +900,28 @@
 .tti-color-row input[type="checkbox"] {
     width: 17px;
     height: 17px;
-    accent-color: var(--ui-accent);
     cursor: pointer;
+    accent-color: var(--ui-accent);
 }
 
 /* 버튼 */
 .text-to-image-converter-settings .buttons,
 .tti-modal .buttons {
     display: inline-flex;
-    align-items: center;
     justify-content: center;
-    gap: 6px;
+    align-items: center;
     min-height: 38px;
     padding: 0 14px;
     border: 1px solid var(--ui-border) !important;
     border-radius: 10px;
     background: var(--ui-surface) !important;
     color: var(--ui-text-soft) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     font-weight: 700;
-    white-space: nowrap;
     cursor: pointer;
     transition: 0.15s ease;
+    gap: 6px;
+    white-space: nowrap;
 }
 .text-to-image-converter-settings .buttons:hover,
 .tti-modal .buttons:hover {
@@ -949,8 +949,8 @@
 .preset-control {
     display: flex;
     align-items: center;
-    gap: 8px;
     margin-bottom: 9px;
+    gap: 8px;
 }
 .preset-control:last-child {
     margin-bottom: 0;
@@ -969,30 +969,30 @@
 /* ---------- 탭 ---------- */
 .tab-container {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 4px;
     margin: 0;
     padding: 12px 14px;
-    border-bottom: 1px solid var(--ui-border);
     background: var(--ui-surface);
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    border-bottom: 1px solid var(--ui-border);
 }
 .tab-btn {
     display: grid;
-    place-items: center;
-    gap: 4px;
     min-height: 52px;
     padding: 6px 2px;
     border: 1px solid transparent !important;
     border-radius: 11px;
     background: transparent !important;
     color: var(--ui-text-muted) !important;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 700;
     cursor: pointer;
     transition: 0.15s ease;
+    place-items: center;
+    gap: 4px;
 }
 .tab-btn i {
-    font-size: 15px;
+    font-size: 15px !important;
 }
 .tab-btn:hover {
     color: var(--ui-text-soft) !important;
@@ -1018,8 +1018,8 @@
 }
 .option-stepper {
     display: flex;
-    align-items: center;
     justify-content: space-between;
+    align-items: center;
     min-height: 62px;
     border-bottom: 1px solid var(--ui-border);
 }
@@ -1035,25 +1035,24 @@
 .option-stepper .stepper-display {
     min-width: 46px;
     color: var(--ui-accent) !important;
-    font-size: 17px;
+    font-size: 17px !important;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
 }
 .option-stepper > div:first-of-type > span {
     color: var(--ui-text-soft) !important;
-    font-size: 13px;
+    font-size: 13px !important;
 }
 .option-stepper .stepper-actions {
     display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap;
-    align-items: center;
     flex: 0 0 auto;
+    flex-direction: row !important;
+    align-items: center;
+    flex-wrap: nowrap;
     gap: 7px;
 }
 .option-stepper .stepper-btn {
     display: grid;
-    place-items: center;
     width: 36px;
     height: 36px;
     padding: 0;
@@ -1061,9 +1060,10 @@
     border-radius: 9px;
     background: var(--ui-surface) !important;
     color: var(--ui-text) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     cursor: pointer;
     transition: 0.12s ease;
+    place-items: center;
 }
 .option-stepper .stepper-btn:hover:not(:disabled) {
     border-color: var(--ui-accent) !important;
@@ -1081,34 +1081,34 @@
 /* ---------- 비율 버튼 ---------- */
 .ratio-control {
     display: flex;
-    flex-wrap: wrap;
     justify-content: center;
     align-items: center;
+    flex-wrap: wrap;
     gap: 10px;
 }
 .tti-ratio-btn {
     display: flex;
-    width: calc(100% / 4 - 10px);
+    flex-direction: column;
     align-items: center;
-    gap: 9px;
+    width: calc(100% / 4 - 10px);
     min-height: 44px;
     padding: 0 12px 0 0;
     border: 0 !important;
     background: transparent !important;
     color: var(--ui-text-muted) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     cursor: pointer;
-    flex-direction: column;
+    gap: 9px;
 }
 .tti-ratio-btn > span {
     display: grid;
-    place-items: center;
     width: 36px;
     height: 36px;
     border: 1px solid var(--ui-border-strong);
     border-radius: 6px;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 700;
+    place-items: center;
 }
 .tti-ratio-btn.active {
     color: var(--ui-accent) !important;
@@ -1123,8 +1123,8 @@
 .overlay-color-picker {
     display: flex;
     align-items: center;
-    gap: 12px;
     padding-bottom: 14px;
+    gap: 12px;
 }
 .overlay-color {
     position: relative;
@@ -1156,15 +1156,15 @@
 .tti-color-row {
     display: flex;
     align-items: center;
-    gap: 10px;
     min-height: 46px;
+    gap: 10px;
     border-bottom: 1px solid var(--ui-border);
 }
 .tti-color-row > label {
     flex: 1;
     margin: 0;
     color: var(--ui-text-soft) !important;
-    font-size: 13px;
+    font-size: 13px !important;
     cursor: pointer;
 }
 .tti-color-spacer {
@@ -1178,18 +1178,18 @@
 }
 .tag-item {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 38px;
     align-items: center;
-    gap: 10px;
     padding: 12px 14px;
     border: 1px solid var(--ui-border);
     border-radius: 12px;
     background: var(--ui-surface);
+    grid-template-columns: minmax(0, 1fr) 38px;
+    gap: 10px;
 }
 .tag-item-left {
     display: grid;
-    gap: 9px;
     min-width: 0;
+    gap: 9px;
 }
 .tag-item-head {
     display: flex;
@@ -1198,14 +1198,14 @@
 }
 .tag-swatch {
     display: grid;
-    place-items: center;
     flex: 0 0 auto;
     width: 30px;
     height: 30px;
     border: 1px solid var(--ui-border-strong);
     border-radius: 8px;
-    font-size: 13px;
+    font-size: 13px !important;
     font-weight: 800;
+    place-items: center;
 }
 .tag-item .tag-name {
     width: 100%;
@@ -1213,8 +1213,8 @@
 }
 .tag-item-row {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
 }
 .tag-item-row > select,
@@ -1231,15 +1231,15 @@
 .tag-color-chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
     margin: 0;
     padding: 4px 9px;
     border: 1px solid var(--ui-border);
     border-radius: 999px;
     background: var(--ui-surface-raised);
     color: var(--ui-text-muted) !important;
-    font-size: 11px;
+    font-size: 11px !important;
     cursor: pointer;
+    gap: 6px;
 }
 .tag-color-chip input[type="color"] {
     width: 30px !important;
@@ -1252,18 +1252,17 @@
 }
 .delete-tag-btn {
     display: grid !important;
-    place-items: center;
     width: 38px;
     height: 38px;
     min-height: 38px !important;
     padding: 0 !important;
+    place-items: center;
 }
 .add-tag-btn,
 .add-rule-button {
     display: flex !important;
-    align-items: center;
     justify-content: center;
-    gap: 7px;
+    align-items: center;
     width: 100%;
     min-height: 42px;
     margin-top: 10px;
@@ -1271,9 +1270,10 @@
     border-radius: 10px;
     background: transparent !important;
     color: var(--ui-text-soft) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     font-weight: 700;
     cursor: pointer;
+    gap: 7px;
 }
 .add-tag-btn:hover,
 .add-rule-button:hover {
@@ -1284,8 +1284,8 @@
 /* ---------- 단어 치환 ---------- */
 .replace-control {
     display: flex;
-    gap: 6px;
     margin-left: auto;
+    gap: 6px;
 }
 .replace-control input[type="checkbox"] {
     position: absolute;
@@ -1294,7 +1294,6 @@
 }
 .replace-control label {
     display: grid;
-    place-items: center;
     width: 34px;
     height: 28px;
     margin: 0;
@@ -1302,9 +1301,10 @@
     border-radius: 8px;
     background: var(--ui-surface);
     color: var(--ui-text-muted) !important;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 800;
     cursor: pointer;
+    place-items: center;
 }
 .replace-control input:checked + label {
     border-color: var(--ui-accent) !important;
@@ -1317,15 +1317,15 @@
 }
 .replacement-rule {
     display: grid;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid var(--ui-border);
+    border-radius: 11px;
     grid-template-columns: minmax(0, 1fr) 34px;
     grid-template-areas:
         "first  del"
         "second del";
-    align-items: center;
     gap: 8px;
-    padding: 10px 12px;
-    border: 1px solid var(--ui-border);
-    border-radius: 11px;
 }
 .replacement-rule > span.rule-index,
 .replacement-rule > i.rule-arrow {
@@ -1342,13 +1342,13 @@
 }
 .replacement-rule label {
     display: grid;
-    gap: 5px;
     min-width: 0;
     margin: 0;
+    gap: 5px;
 }
 .replacement-rule label small {
     color: var(--ui-text-muted) !important;
-    font-size: 10px;
+    font-size: 10px !important;
 }
 .replacement-rule input[type="text"] {
     height: 36px !important;
@@ -1356,7 +1356,6 @@
 }
 .replacement-rule > button {
     display: grid;
-    place-items: center;
     width: 34px;
     height: 36px;
     padding: 0;
@@ -1365,6 +1364,7 @@
     background: transparent !important;
     color: var(--ui-text-muted) !important;
     cursor: pointer;
+    place-items: center;
 }
 .replacement-rule > button:hover {
     background: var(--ui-hover) !important;
@@ -1372,10 +1372,10 @@
 }
 .replacement-empty {
     display: none;
-    place-items: center;
     min-height: 92px;
     color: var(--ui-text-muted);
-    font-size: 13px;
+    font-size: 13px !important;
+    place-items: center;
 }
 .replacement-rule-list:empty + .replacement-empty {
     display: grid;
@@ -1383,8 +1383,8 @@
 .replace-buttons {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
     margin-top: 14px;
+    gap: 8px;
 }
 .replace-buttons .buttons {
     flex: 1 1 30%;
@@ -1398,8 +1398,8 @@
 }
 .tag-card-preview {
     min-width: 0;
-    overflow-wrap: anywhere;
     line-height: 1.8;
+    overflow-wrap: anywhere;
 }
 .tag-card-preview > span {
     padding: 3px 6px;
@@ -1417,18 +1417,18 @@
     display: none !important;
 }
 .tti-pen-settings-modal .tag-card-preview {
+    margin-bottom: 12px;
     text-align: center;
     border-bottom: 1px solid var(--ui-border);
-    margin-bottom: 12px;
 }
 .tti-pen-settings-modal .delete-tag-btn {
     align-self: flex-end;
 }
 .tti-color-input-group {
     display: inline-flex !important;
+    flex: 0 0 auto;
     align-items: center !important;
     gap: 6px !important;
-    flex: 0 0 auto;
 }
 .tti-basic-color {
     width: 22px !important;
@@ -1449,34 +1449,34 @@
 .tti-replace-option-row {
     display: flex;
     align-items: center;
-    gap: 12px;
     padding-bottom: 12px;
-    border-bottom: 1px solid var(--ui-border);
     color: var(--ui-text-soft);
-    font-size: 13px;
+    font-size: 13px !important;
     font-weight: 800;
+    gap: 12px;
+    border-bottom: 1px solid var(--ui-border);
 }
 
 /* ---------- 이미지 정보 표시 ---------- */
 .tti-meta-row {
     display: grid;
-    grid-template-columns: 84px minmax(0, 1fr);
     align-items: center;
-    gap: 10px 12px;
     padding: 13px 0;
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 10px 12px;
     border-bottom: 1px solid var(--ui-border);
 }
 .tti-meta-label {
     color: var(--ui-text-soft) !important;
-    font-size: 13px;
+    font-size: 13px !important;
 }
 .tti-segment {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 4px;
     padding: 4px;
     border-radius: 10px;
     background: var(--ui-surface);
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
 }
 .tti-segment button {
     min-height: 32px;
@@ -1484,7 +1484,7 @@
     border-radius: 7px;
     background: transparent !important;
     color: var(--ui-text-muted) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     font-weight: 700;
     cursor: pointer;
 }
@@ -1508,38 +1508,38 @@
     display: none !important;
 }
 .background-picker:has(.html-mode-hidden) {
-    grid-template-columns: unset;
-    padding-left: 10px;
     padding-right: 10px;
+    padding-left: 10px;
+    grid-template-columns: unset;
 }
 
 /* ---------- 모달 ---------- */
 .tti-modal-backdrop {
     display: none;
     position: fixed;
-    z-index: 100000;
     top: 0;
-    left: 0;
     right: 0;
     bottom: 0;
+    left: 0;
+    z-index: 100000;
     width: 100vw;
     width: 100dvw;
     height: 100vh;
     height: 100dvh;
-    place-items: center;
     padding: 20px;
+    background: color-mix(in srgb, #08080a 64%, transparent);
+    font-family: "Pretendard-Regular", "Noto Sans KR", sans-serif;
+    place-items: center;
     touch-action: pan-y;
     overscroll-behavior: contain;
-    background: color-mix(in srgb, #08080a 64%, transparent);
     backdrop-filter: blur(7px);
-    font-family: "Pretendard-Regular", "Noto Sans KR", sans-serif;
 }
 .tti-modal-backdrop.open {
     display: grid !important;
 }
 .tti-modal-backdrop {
-    grid-template-columns: minmax(0, 1fr);
     min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
     box-sizing: border-box !important;
 }
 .tti-modal-backdrop > .tti-modal {
@@ -1557,18 +1557,18 @@
     display: grid !important;
     align-items: end;
     padding: 0;
-    visibility: hidden;
     background: color-mix(in srgb, #08080a 20%, transparent);
-    backdrop-filter: none;
     opacity: 0;
+    visibility: hidden;
     transition:
         opacity 0.24s ease,
         visibility 0s linear 0.24s;
+    backdrop-filter: none;
     pointer-events: none;
 }
 #tti_text_modal_backdrop.open {
-    visibility: visible;
     opacity: 1;
+    visibility: visible;
     transition-delay: 0s;
     pointer-events: auto;
 }
@@ -1578,15 +1578,15 @@
     width: min(520px, 100%);
     max-height: calc(100vh - 40px);
     max-height: calc(100dvh - 40px);
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-y;
-    overscroll-behavior: contain;
     padding: 0 22px 4px;
     border: 1px solid var(--ui-border);
     border-radius: 18px;
     background: var(--ui-panel);
     color: var(--ui-text);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
     box-shadow: var(--ui-shadow);
 }
 .tti-modal.tti-modal-wide {
@@ -1597,11 +1597,11 @@
     max-height: min(78dvh, 760px);
     margin: 0;
     padding-bottom: max(4px, env(safe-area-inset-bottom));
-    border-bottom: 0;
     border-radius: 20px 20px 0 0;
-    box-shadow: 0 -14px 46px rgba(0, 0, 0, 0.34);
-    transform: translateY(105%);
     transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.3, 1);
+    transform: translateY(105%);
+    border-bottom: 0;
+    box-shadow: 0 -14px 46px rgba(0, 0, 0, 0.34);
     contain: layout paint;
     will-change: transform;
 }
@@ -1616,84 +1616,83 @@
 }
 .tti-replace-modal .replacement-rule-list {
     max-height: 390px;
-    overflow: auto;
     margin-top: 18px;
+    overflow: auto;
 }
 .tti-replace-modal .replacement-rule {
-    grid-template-columns: 0 minmax(0, 1fr) auto minmax(0, 1fr) 42px 32px;
-    grid-template-areas: "number first arrow second toggle del";
     align-items: end;
     padding: 10px;
+    grid-template-columns: 0 minmax(0, 1fr) auto minmax(0, 1fr) 42px 32px;
+    grid-template-areas: "number first arrow second toggle del";
 }
 .tti-replace-modal .rule-index,
 .tti-replace-modal .rule-arrow {
     display: none;
 }
 .tti-replace-modal .rule-index {
-    grid-area: number;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 800;
+    grid-area: number;
 }
 .tti-replace-modal .rule-arrow {
     grid-area: arrow;
 }
 .tti-replace-modal .replacement-rule input[type="text"] {
     width: 100%;
-    min-width: 0;
     height: 37px !important;
+    min-width: 0;
     padding: 0 10px;
     font-size: 13px !important;
 }
 .tti-replace-modal .replacement-rule > .rule-toggle {
-    grid-area: toggle;
     width: 42px;
     height: 37px;
     border: 1px solid var(--ui-border-strong) !important;
     background: var(--ui-surface-raised) !important;
-    font-size: 10px;
+    font-size: 10px !important;
     font-weight: 800;
+    grid-area: toggle;
 }
 .tti-replace-modal .rule-toggle[aria-checked="true"] {
     border-color: var(--ui-accent) !important;
-    color: var(--ui-on-accent) !important;
     background: var(--ui-accent) !important;
+    color: var(--ui-on-accent) !important;
 }
 .tti-replace-modal .is-disabled label {
     opacity: 0.5;
 }
 @media (max-width: 540px) {
     .tti-replace-modal .replacement-rule {
+        align-items: center;
         grid-template-columns: 18px minmax(0, 1fr) 42px 32px;
         grid-template-areas: "number first toggle del" "arrow second toggle del";
-        align-items: center;
     }
 }
 .tti-modal > header {
-    position: sticky;
-    z-index: 4;
-    top: 0;
     display: flex;
-    align-items: flex-start;
     justify-content: space-between;
-    gap: 18px;
+    align-items: flex-start;
+    position: sticky;
+    top: 0;
+    z-index: 4;
     margin-bottom: 14px;
     padding: 20px 0 14px;
     background: var(--ui-panel);
+    gap: 18px;
 }
 .tti-modal > header small {
     color: var(--ui-accent) !important;
-    font-size: 10px;
+    font-size: 10px !important;
     font-weight: 850;
     letter-spacing: 0.13em;
 }
 .tti-modal > header h3 {
     margin: 3px 0 0 !important;
     color: var(--ui-text) !important;
-    font-size: 18px;
+    font-size: 18px !important;
 }
 .tti-modal > header > button {
     display: grid;
-    place-items: center;
     flex: 0 0 auto;
     width: 36px;
     height: 36px;
@@ -1703,21 +1702,22 @@
     background: transparent !important;
     color: var(--ui-text-muted) !important;
     cursor: pointer;
+    place-items: center;
 }
 .tti-modal > header > button:hover {
     background: var(--ui-hover) !important;
     color: var(--ui-text) !important;
 }
 .tti-modal > footer {
-    position: sticky;
-    z-index: 4;
-    bottom: 0;
     display: flex;
     align-items: center;
-    gap: 10px;
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
     margin-top: 16px;
     padding: 14px 0 20px;
     background: var(--ui-panel);
+    gap: 10px;
 }
 .tti-modal > footer button.primary {
     flex: 1;
@@ -1726,17 +1726,31 @@
     border-radius: 11px;
     background: var(--ui-accent) !important;
     color: var(--ui-on-accent) !important;
-    font-size: 14px;
+    font-size: 14px !important;
     font-weight: 800;
     cursor: pointer;
+}
+.tti-modal > footer button.text-field-copy {
+    width: auto;
+    min-height: 44px;
+    border: 1px solid var(--ui-border) !important;
+    border-radius: 11px;
+    color: var(--ui-text) !important;
+    font-size: 14px !important;
+    aspect-ratio: 1 / 1;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+.tti-modal > footer button.text-field-copy:hover {
+    border-color: var(--ui-accent) !important;
 }
 .tti-help-link {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
     color: var(--ui-text-muted) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     text-decoration: none;
+    gap: 6px;
     white-space: nowrap;
 }
 .tti-help-link:hover {
@@ -1754,30 +1768,30 @@
 }
 .tti-preset-current {
     display: grid;
-    gap: 4px;
     padding: 14px 16px;
     border: 1px solid var(--ui-border);
     border-radius: 12px;
     background: var(--ui-surface);
+    gap: 4px;
 }
 .tti-preset-current small {
     color: var(--ui-text-muted) !important;
-    font-size: 10px;
+    font-size: 10px !important;
     font-weight: 800;
     letter-spacing: 0.06em;
 }
 .tti-preset-current b {
-    overflow: hidden;
     color: var(--ui-text) !important;
-    font-size: 15px;
+    font-size: 15px !important;
+    overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 .tti-preset-actions {
     display: grid;
+    margin-top: 12px;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    margin-top: 12px;
 }
 .tti-preset-actions .buttons {
     justify-content: flex-start;
@@ -1788,47 +1802,47 @@
 .tti-pen-bar {
     display: flex;
     align-items: center;
-    gap: 10px;
     margin-bottom: 10px;
     padding: 10px 12px;
     border: 1px solid var(--ui-border);
     border-radius: 12px;
     background: var(--ui-surface);
+    gap: 10px;
 }
 .tti-pen-bar-label {
     display: inline-flex;
-    align-items: center;
     flex: 0 0 auto;
-    gap: 6px;
+    align-items: center;
     color: var(--ui-text-muted) !important;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 800;
+    gap: 6px;
 }
 .tti-pen-list {
     display: flex;
     flex: 1 1 0;
-    gap: 7px;
     min-width: 0;
-    overflow-x: auto;
     padding-bottom: 2px;
+    gap: 7px;
+    overflow-x: auto;
     scrollbar-width: thin;
 }
 .tti-pen {
     display: inline-flex;
-    align-items: center;
     flex: 0 0 auto;
-    gap: 7px;
+    align-items: center;
     min-height: 32px;
     padding: 0 12px;
     border: 1px solid var(--ui-border-strong) !important;
     border-radius: 999px;
     background: var(--ui-surface-raised) !important;
     color: var(--ui-text-soft) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     font-weight: 700;
-    white-space: nowrap;
     cursor: pointer;
     transition: 0.15s ease;
+    gap: 7px;
+    white-space: nowrap;
 }
 .tti-pen:hover {
     border-color: var(--ui-accent) !important;
@@ -1841,13 +1855,12 @@
 }
 .tti-pen-empty {
     color: var(--ui-text-muted);
-    font-size: 12px;
+    font-size: 12px !important;
     line-height: 32px;
     white-space: nowrap;
 }
 .tti-pen-erase {
     display: grid;
-    place-items: center;
     flex: 0 0 auto;
     width: 34px;
     height: 32px;
@@ -1857,6 +1870,7 @@
     background: var(--ui-surface-raised) !important;
     color: var(--ui-text-muted) !important;
     cursor: pointer;
+    place-items: center;
 }
 .tti-pen-erase:hover {
     border-color: var(--ui-danger) !important;
@@ -1869,9 +1883,9 @@
     padding: 14px;
     border: 1px solid var(--ui-border-strong) !important;
     border-radius: 12px;
-    outline: 0;
     background: var(--ui-surface) !important;
     color: var(--ui-text) !important;
+    outline: 0;
     font:
         14px/1.75 "Pretendard-Regular",
         sans-serif;
@@ -1883,13 +1897,13 @@
 .tti-rich-text-editor {
     width: 100%;
     height: min(46dvh, 400px);
-    overflow: auto;
     padding: 14px;
     border: 1px solid var(--ui-border-strong) !important;
     border-radius: 12px;
-    outline: 0;
     background: var(--ui-surface) !important;
     color: var(--ui-text) !important;
+    overflow: auto;
+    outline: 0;
     font:
         14px/1.75 "Pretendard-Regular",
         sans-serif;
@@ -1915,10 +1929,9 @@
 }
 .tti-highlight-float {
     display: none;
+    align-items: center;
     position: fixed;
     z-index: 100003;
-    align-items: center;
-    gap: 3px;
     width: max-content;
     height: 48px;
     padding: 4px 6px;
@@ -1926,6 +1939,7 @@
     border-radius: 13px;
     background: var(--ui-surface-raised);
     color: var(--ui-text);
+    gap: 3px;
     box-shadow: var(--ui-shadow);
 }
 .tti-highlight-float.is-visible {
@@ -1943,8 +1957,8 @@
     width: 9px;
     height: 9px;
     background: var(--ui-surface-raised);
-    content: "";
     transform: translateX(-50%) rotate(45deg);
+    content: "";
 }
 .tti-highlight-float.placement-top::after {
     bottom: -5px;
@@ -1957,21 +1971,21 @@
     border-left: 1px solid var(--ui-border-strong);
 }
 .tti-highlight-action {
+    display: flex;
+    justify-content: center;
+    align-items: center;
     position: relative;
     z-index: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
     height: 38px;
     padding: 0 9px;
     border: 0 !important;
     border-radius: 9px;
     background: transparent !important;
     color: var(--ui-text) !important;
-    font-size: 13px;
+    font-size: 13px !important;
     font-weight: 700;
     cursor: pointer;
+    gap: 5px;
 }
 .tti-highlight-action:hover {
     background: var(--ui-hover) !important;
@@ -1980,12 +1994,12 @@
     color: var(--ui-danger) !important;
 }
 .tti-highlight-color-control {
+    display: grid;
     position: relative;
     z-index: 3;
-    display: grid;
-    place-items: center;
     width: 38px;
     height: 38px;
+    place-items: center;
 }
 .tti-highlight-color,
 .tti-highlight-palette button {
@@ -2002,13 +2016,13 @@
     display: none;
     position: absolute;
     left: 50%;
-    gap: 8px;
     padding: 8px 10px;
     border: 1px solid var(--ui-border-strong);
     border-radius: 999px;
     background: var(--ui-surface-raised);
-    box-shadow: var(--ui-shadow);
     transform: translateX(-50%);
+    gap: 8px;
+    box-shadow: var(--ui-shadow);
 }
 .tti-highlight-float.palette-open .tti-highlight-palette {
     display: flex;
@@ -2023,11 +2037,16 @@
     outline: 2px solid var(--ui-text);
     outline-offset: 2px;
 }
+.text-field-top-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
 .text-field-buttons {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
     margin-top: 10px;
+    gap: 8px;
 }
 .text-field-buttons .buttons {
     flex: 1 1 30%;
@@ -2043,11 +2062,11 @@
 }
 .html-switcher-inputs-header {
     display: flex;
-    align-items: center;
     justify-content: space-between;
+    align-items: center;
     margin-bottom: 10px;
     color: var(--ui-text-muted) !important;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 800;
     letter-spacing: 0.04em;
 }
@@ -2066,24 +2085,24 @@
     padding: 10px 12px;
     border: 1px solid var(--ui-border-strong) !important;
     border-radius: 10px;
-    outline: 0;
     background: var(--ui-surface-raised) !important;
     color: var(--ui-text) !important;
+    outline: 0;
     font:
         13px/1.7 "Pretendard-Regular",
         sans-serif;
     resize: vertical;
 }
 .html-switcher-remove-btn {
-    align-self: start;
     width: 34px;
     height: 34px;
     min-height: 34px !important;
     padding: 0 !important;
+    align-self: start;
 }
 .html-switcher-inputs-empty {
     color: var(--ui-text-muted);
-    font-size: 12px;
+    font-size: 12px !important;
 }
 .html-switcher-inputs.has-items .html-switcher-inputs-empty {
     display: none;
@@ -2169,7 +2188,7 @@
     border-radius: 7px;
     background: rgba(18, 20, 24, 0.92);
     color: #fff;
-    font-size: 11px;
+    font-size: 11px !important;
     line-height: 1;
     opacity: 0;
     transition: opacity 0.12s ease;
@@ -2195,8 +2214,8 @@
     align-items: flex-start;
     position: fixed;
     z-index: 5500;
-    gap: 8px;
     font-family: "Pretendard-Regular", "Noto Sans KR", sans-serif;
+    gap: 8px;
 }
 @media (prefers-color-scheme: light) {
     .tti-selection-float {
@@ -2218,15 +2237,15 @@
 .tti-selection-append,
 .tti-selection-bookmark {
     display: grid;
-    place-items: center;
     width: 30px;
     height: 30px;
     border: 1px solid var(--ui-border-strong) !important;
     border-radius: 10px;
     background: var(--ui-surface-raised) !important;
     color: var(--ui-text-soft) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     cursor: pointer;
+    place-items: center;
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
 }
 .tti-selection-toggle:hover,
@@ -2242,12 +2261,12 @@
     width: min(250px, calc(100vw - 32px));
     max-height: min(340px, calc(100vh - 28px));
     padding: 7px;
-    overflow-y: auto;
     border: 1px solid var(--ui-border-strong);
     border-radius: 13px;
     background: var(--ui-surface-raised);
-    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
     transform: translateX(-50%);
+    overflow-y: auto;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
 }
 .tti-selection-float.menu-open .tti-selection-menu {
     display: block;
@@ -2294,7 +2313,7 @@
     border-radius: 9px;
     background: var(--ui-surface) !important;
     color: var(--ui-text-soft) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     cursor: pointer;
 }
 .tti-selection-submenu-header {
@@ -2323,7 +2342,7 @@
 .tti-selection-empty {
     padding: 10px 6px;
     color: var(--ui-text-muted);
-    font-size: 12px;
+    font-size: 12px !important;
 }
 .tti-selection-action:hover,
 .tti-selection-preset:hover,
@@ -2384,8 +2403,8 @@
 }
 @font-face {
     font-family: "GangwonEducationModuche";
-    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2201-2@1.0/GangwonEdu_OTFLightA.woff") format("woff");
     font-weight: 300;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2201-2@1.0/GangwonEdu_OTFLightA.woff") format("woff");
     font-display: swap;
 }
 @font-face {
@@ -2468,8 +2487,8 @@
 }
 @font-face {
     font-family: "OngleipParkDahyeon";
-    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2411-3@1.0/Ownglyph_ParkDaHyun.woff2") format("woff2");
     font-weight: normal;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2411-3@1.0/Ownglyph_ParkDaHyun.woff2") format("woff2");
     font-display: swap;
 }
 @font-face {
@@ -2671,68 +2690,68 @@
 }
 @font-face {
     font-family: "NostalgicPoliceFairness";
-    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/Griun_PolFairness-Rg.woff2") format("woff2");
     font-weight: normal;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/Griun_PolFairness-Rg.woff2") format("woff2");
     font-display: swap;
 }
 @font-face {
     font-family: "NostalgicPoliceHumanRights";
-    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/Griun_PolHumanrights-Rg.woff2") format("woff2");
     font-weight: normal;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/Griun_PolHumanrights-Rg.woff2") format("woff2");
     font-display: swap;
 }
 @font-face {
     font-family: "NostalgicCocochoitoon";
-    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-1@1.0/Griun_Cocochoitoon-Rg.woff2") format("woff2");
     font-weight: normal;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-1@1.0/Griun_Cocochoitoon-Rg.woff2") format("woff2");
     font-display: swap;
 }
 @font-face {
     font-family: "A2z";
-    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/에이투지체-5Medium.woff2") format("woff2");
     font-weight: 500;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/에이투지체-5Medium.woff2") format("woff2");
     font-display: swap;
 }
 @font-face {
     font-family: "Tangba";
-    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-4@1.1/Tangba12.woff2") format("woff2");
     font-weight: normal;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-4@1.1/Tangba12.woff2") format("woff2");
     font-display: swap;
 }
 @font-face {
     font-family: "NostalgicWensonjabiSeulgiru";
-    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-1@1.0/Griun_LEFTSG-Rg.woff2") format("woff2");
     font-weight: normal;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-1@1.0/Griun_LEFTSG-Rg.woff2") format("woff2");
     font-display: swap;
 }
 @font-face {
     font-family: "PyeojinGothic";
-    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2504-1@1.0/PyeojinGothic-Regular.woff2") format("woff2");
     font-weight: 400;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2504-1@1.0/PyeojinGothic-Regular.woff2") format("woff2");
     font-display: swap;
 }
 @font-face {
     font-family: "NostalgicDesertYeonwoo";
-    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2508-2@1.0/Griun_YEONWOO-Rg.woff2") format("woff2");
     font-weight: normal;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2508-2@1.0/Griun_YEONWOO-Rg.woff2") format("woff2");
     font-style: normal;
 }
 @font-face {
     font-family: "ReperiBase";
-    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2201-2@1.0/LeferiBaseType-RegularA.woff") format("woff");
     font-weight: normal;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2201-2@1.0/LeferiBaseType-RegularA.woff") format("woff");
     font-display: swap;
 }
 @font-face {
     font-family: "Paperlogy";
-    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-4Regular.woff2") format("woff2");
     font-weight: 400;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-4Regular.woff2") format("woff2");
     font-display: swap;
 }
 @font-face {
     font-family: "Paperozi";
-    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-9Black.woff2") format("woff2");
     font-weight: 900;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-9Black.woff2") format("woff2");
     font-display: swap;
 }
 
@@ -2746,7 +2765,7 @@
     margin-left: auto;
     padding: 1px 8px;
     border-radius: 8px;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 700;
     line-height: 1.6;
 }
@@ -2774,11 +2793,11 @@
         grid-template-rows: 48px minmax(0, 1fr) auto;
     }
     .tti-mobile-ready .tti-editor-body {
-        position: relative;
         display: grid;
+        position: relative;
+        overflow: hidden;
         grid-template-columns: minmax(0, 1fr);
         grid-template-rows: minmax(0, 1fr);
-        overflow: hidden;
     }
     .tti-mobile-ready[data-mobile-sheet="half"] .tti-editor-controls {
         height: 48%;
@@ -2788,9 +2807,9 @@
     }
     .tti-mobile-ready .tti-preview-pane {
         min-height: 0;
-        overflow: hidden;
         padding: 6px 8px;
         border: 0;
+        overflow: hidden;
         scrollbar-gutter: auto;
     }
     .tti-mobile-ready .tti-preview-pane h4 {
@@ -2798,7 +2817,7 @@
         min-height: 28px;
         margin: 0 0 4px !important;
         padding: 0 4px;
-        font-size: 11px;
+        font-size: 11px !important;
     }
     .tti-mobile-ready .tti-preview-stage {
         padding: 0 32px 30px;
@@ -2808,10 +2827,10 @@
         min-height: 0;
     }
     .tti-mobile-ready .image-preview-item img {
-        max-width: 100%;
-        max-height: var(--tti-mobile-preview-height, 60dvh);
         width: auto;
         height: auto;
+        max-width: 100%;
+        max-height: var(--tti-mobile-preview-height, 60dvh);
     }
     .tti-mobile-ready .html-render-preview {
         max-height: max(0px, calc(var(--tti-mobile-preview-height, 60dvh) - 44px));
@@ -2831,18 +2850,18 @@
         right: 0;
     }
     .tti-mobile-ready .tti-editor-controls {
-        position: absolute;
-        inset: auto 0 0;
-        z-index: 2;
-        height: 0;
         display: flex;
         flex-direction: column;
+        position: absolute;
+        z-index: 2;
+        height: 0;
         min-height: 0;
-        overflow: hidden;
         padding: 0;
         border: 1px solid var(--ui-border);
-        border-bottom: 0;
         border-radius: 20px 20px 0 0;
+        overflow: hidden;
+        inset: auto 0 0;
+        border-bottom: 0;
         box-shadow: 0 -6px 24px #00000010;
         scrollbar-gutter: auto;
     }
@@ -2855,14 +2874,14 @@
     }
     .tti-mobile-handle {
         display: grid;
-        place-items: center;
         width: 100%;
         height: 24px;
         padding: 0;
         border: 0;
         background: transparent;
-        touch-action: none;
         cursor: ns-resize;
+        place-items: center;
+        touch-action: none;
     }
     .tti-mobile-handle span {
         width: 36px;
@@ -2872,29 +2891,29 @@
     }
     .tti-mobile-sheet-heading {
         display: flex;
-        align-items: center;
         justify-content: space-between;
+        align-items: center;
         padding: 0 14px 6px;
-        font-size: 14px;
+        font-size: 14px !important;
     }
     .tti-mobile-sheet-heading button {
         min-width: 44px;
         min-height: 36px;
+        margin-left: 4px;
         border: 0;
         border-radius: 10px;
         background: var(--ui-surface);
         color: var(--ui-text-soft);
-        margin-left: 4px;
+        font-size: 12px !important;
         font: inherit;
-        font-size: 12px;
     }
     .tti-mobile-ready .tti-mobile-scroll {
         display: block;
+        flex: 1;
         min-height: 0;
+        padding-bottom: 20px;
         overflow-y: auto;
         overscroll-behavior: contain;
-        padding-bottom: 20px;
-        flex: 1;
     }
     .tti-mobile-ready .tti-mobile-scroll > .tti-primary-actions,
     .tti-mobile-ready .tti-mobile-scroll > .preset-section,
@@ -2910,20 +2929,20 @@
     }
     #tti_text_modal_backdrop #tti_open_replace_modal {
         flex: 1 1 46%;
+        justify-content: center;
+        width: auto;
         min-width: 0;
         min-height: 44px;
-        width: auto;
-        justify-content: center;
         padding: 8px 12px;
-        font-size: 12px;
+        font-size: 12px !important;
     }
     #tti_text_modal_backdrop #tti_text_length_badge {
         display: block;
         margin-top: 4px;
         color: var(--ui-text-muted);
-        font-size: 12px;
-        font-style: normal;
+        font-size: 12px !important;
         font-weight: 400;
+        font-style: normal;
     }
     .tti-mobile-ready[data-mobile-category="other"] .tti-mobile-scroll > .tti-primary-actions,
     .tti-mobile-ready[data-mobile-category="other"] .tti-mobile-scroll > .preset-section {
@@ -2940,18 +2959,17 @@
     }
     .tti-mobile-bar {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 4px;
         padding: 6px max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
         background: var(--ui-panel);
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 4px;
         border-top: 1px solid var(--ui-border);
     }
     .tti-mobile-bar button {
         display: flex;
         flex-direction: column;
-        align-items: center;
         justify-content: center;
-        gap: 5px;
+        align-items: center;
         min-width: 0;
         min-height: 48px;
         padding: 6px 2px;
@@ -2959,12 +2977,13 @@
         border-radius: 12px;
         background: transparent;
         color: var(--ui-text-soft);
-        font: inherit;
-        font-size: 11px;
+        font-size: 11px !important;
         cursor: pointer;
+        gap: 5px;
+        font: inherit;
     }
     .tti-mobile-bar button i {
-        font-size: 17px;
+        font-size: 17px !important;
     }
     .tti-mobile-bar button[aria-expanded="true"] {
         background: var(--ui-hover);

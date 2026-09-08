@@ -5412,22 +5412,29 @@ function organizeDialogueText(rawText) {
     return resultLines.join("\n");
 }
 function restoreButtons() {
-    let deletedText = "";
+    let lastText = null;
+
+    const saveUndoState = () => {
+        lastText = $("#text_to_image").val();
+    };
+
     $("#clear_text_btn").on("click", () => {
-        deletedText = $("#text_to_image").val();
+        saveUndoState();
         $("#text_to_image").val("");
         syncRichEditorFromSource();
         refreshPreview();
     });
     $("#restore_text_btn").on("click", () => {
-        if (deletedText !== "") {
-            $("#text_to_image").val(deletedText);
+        if (lastText !== null) {
+            const current = $("#text_to_image").val();
+            $("#text_to_image").val(lastText);
             syncRichEditorFromSource();
             refreshPreview();
-            deletedText = "";
+            lastText = current;
         }
     });
     $("#organize_text_btn").on("click", () => {
+        saveUndoState();
         const current = $("#text_to_image").val();
         const organized = organizeDialogueText(current);
         $("#text_to_image").val(organized);
@@ -5439,6 +5446,23 @@ function restoreButtons() {
         });
 
         refreshPreview();
+    });
+    $("#apply_replace_btn").on("click", () => {
+        saveUndoState();
+        const current = $("#text_to_image").val();
+        const replaced = replaceWords(current);
+        $("#text_to_image").val(replaced);
+        syncRichEditorFromSource();
+        refreshPreview();
+    });
+    $(".text-field-copy").on("click", async () => {
+        const current = $("#text_to_image").val();
+        const copied = await copyToClipboard(current);
+        if (copied) {
+            toastr.success("클립보드에 복사되었습니다");
+        } else {
+            toastr.warning("클립보드 복사에 실패했습니다");
+        }
     });
 }
 function tabButtons() {
