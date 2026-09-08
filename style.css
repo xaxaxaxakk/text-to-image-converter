@@ -538,6 +538,7 @@
 
 /* ---------- 토글 리스트 ---------- */
 .tti-option-label {
+    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -554,6 +555,9 @@
 }
 .tti-option-label > input[type="checkbox"] {
     position: absolute;
+    top: 50%;
+    right: 13px;
+    transform: translateY(-50%);
     opacity: 0;
     pointer-events: none;
 }
@@ -3044,7 +3048,7 @@
 .tti-web-font-name {
     min-width: 0;
     color: var(--ui-text-soft) !important;
-    font-size: 13px;
+    font-size: 13px !important;
     overflow-wrap: anywhere;
 }
 .tti-web-font-type {
