@@ -729,7 +729,11 @@
 }
 .how_to_use_box > span {
     display: grid;
-    gap: 10px;
+    gap: 15px;
+    & > span:not(:last-child) {
+        padding-bottom: 15px;
+        border-bottom: 1px dashed var(--ui-border);
+    }
 }
 .how_to_use_box b {
     color: var(--ui-text) !important;
@@ -1734,6 +1738,7 @@
     min-height: 44px;
     border: 1px solid var(--ui-border) !important;
     border-radius: 11px;
+    background-color: var(--ui-surface) !important;
     color: var(--ui-text) !important;
     font-size: 14px !important;
     cursor: pointer;
@@ -3024,21 +3029,46 @@
     flex-shrink: 0;
 }
 .tti-web-font-list {
-    max-height: 180px;
+    max-height: min(52dvh, 360px);
     overflow: auto;
 }
 .tti-web-font-list .tti-field {
     gap: 5px;
 }
-.tti-web-font-list .tti-field > span {
+.tti-web-font-label {
     flex: 1;
+    justify-content: flex-start;
     min-width: 0;
+    overflow: hidden;
+}
+.tti-web-font-name {
+    min-width: 0;
+    color: var(--ui-text-soft) !important;
+    font-size: 13px;
     overflow-wrap: anywhere;
 }
+.tti-web-font-type {
+    display: inline-grid;
+    flex: 0 0 24px;
+    width: 24px;
+    height: 22px;
+    border-radius: 6px;
+    background: var(--ui-hover);
+    color: var(--ui-accent) !important;
+    font-size: 11px !important;
+    place-items: center;
+}
+.tti-web-font-list .tti-field {
+    border-bottom-style: dashed;
+}
+.tti-web-font-list > *:last-child {
+    border-bottom: 0 !important;
+}
 .tti-web-font-list .tti-field .buttons {
-    height: 34px !important;
-    min-height: 34px !important;
+    height: 30px !important;
+    min-height: 30px !important;
     padding: unset;
+    font-size: 11px !important;
     aspect-ratio: 1 / 1 !important;
 }
 .tti-web-font-backup {
