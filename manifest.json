@@ -1,11 +1,11 @@
 {
-  "display_name": "로그 발췌",
-  "loading_order": 1,
-  "requires": [],
-  "optional": [],
-  "js": "index.js",
-  "css": "style.css",
-  "author": "xaxaxaxakk",
-  "version": "1.5.0",
-  "homePage": ""
+    "display_name": "로그 발췌",
+    "loading_order": 1,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "xaxaxaxakk",
+    "version": "1.5.1",
+    "homePage": ""
 }

@@ -301,7 +301,6 @@
     max-height: min(64dvh, 660px);
     border-radius: 4px;
     object-fit: contain;
-    box-shadow: 0 16px 55px rgba(0, 0, 0, 0.3);
 }
 .image-preview-item.html-preview-item {
     width: min(560px, 100%);
@@ -1737,9 +1736,9 @@
     border-radius: 11px;
     color: var(--ui-text) !important;
     font-size: 14px !important;
-    aspect-ratio: 1 / 1;
     cursor: pointer;
     transition: border-color 0.15s ease;
+    aspect-ratio: 1 / 1;
 }
 .tti-modal > footer button.text-field-copy:hover {
     border-color: var(--ui-accent) !important;
@@ -1877,7 +1876,8 @@
     color: var(--ui-danger) !important;
 }
 
-#text_to_image {
+#text_to_image,
+.tti-web-font-css {
     width: 100%;
     height: min(46dvh, 400px);
     padding: 14px;
@@ -3005,4 +3005,48 @@
     #tti_text_modal_backdrop .tti-bottom-sheet {
         max-height: 92dvh;
     }
+}
+
+.tti-field > .tti-web-font-control {
+    flex: 0 1 230px;
+    min-width: 0;
+    margin: 0;
+}
+.tti-web-font-control .tti-select-trigger {
+    flex: 1;
+    min-width: 0;
+}
+.tti-web-font-css {
+    height: 160px;
+    min-height: 120px;
+}
+.tti-web-font-form > * {
+    flex-shrink: 0;
+}
+.tti-web-font-list {
+    max-height: 180px;
+    overflow: auto;
+}
+.tti-web-font-list .tti-field {
+    gap: 5px;
+}
+.tti-web-font-list .tti-field > span {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.tti-web-font-list .tti-field .buttons {
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: unset;
+    aspect-ratio: 1 / 1 !important;
+}
+.tti-web-font-backup {
+    margin-top: 0;
+}
+.tti-web-font-status {
+    margin: 14px 0 0;
+}
+.tti-web-font-status:empty {
+    display: none;
 }
