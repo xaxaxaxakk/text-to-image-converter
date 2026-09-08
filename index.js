@@ -1,5 +1,6 @@
 import {extension_settings} from "../../../extensions.js";
 import {saveSettings} from "../../../../script.js";
+import {setupMobileEditor} from "./mobile-ui.js";
 
 function debounce(fn, delay) {
   let timer;
@@ -55,6 +56,7 @@ const FileSaverCDN = "https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/
 const extensionName = "text-to-image-converter";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 const defaultSettings = {
+  uiTheme: "light",
   fontFamily: "Pretendard-Regular",
   fontWeight: "normal",
   htmlFontFace: "Ridibatang",
@@ -99,12 +101,15 @@ const defaultSettings = {
   overlayColor: "#ffffff",
   presets: {},
   currentPreset: null,
-  footerText: "",
   footerLayoutMode: "scroll",
-  footerWidth: 750,
-  footerHeight: 750,
-  footerColor: "#000000",
-  footerBgColor: "#ffffff",
+  footerWidth: 500,
+  footerHeight: 500,
+  chatTitleMode: "off",
+  chatTitleCustom: "",
+  charNameMode: "off",
+  charNameCustom: "",
+  useWatermark: false,
+  replaceRules: [],
   autoPreview: true,
   htmlMode: false,
   letterCase: false,
@@ -150,6 +155,107 @@ function parsePositiveInt(value, fallback) {
 function updateFooterLayoutUIState() {
   const isScroll = $("#footer_layout_mode").val() !== "full";
   $("#footer .footer-scroll-only").toggleClass("footer-scroll-only-hidden", !isScroll);
+}
+
+/* ---------- 형광펜 팔레트 ---------- */
+const HIGHLIGHT_PALETTE = [
+  {name: "노랑", bg: "#f7e8b4"},
+  {name: "연두", bg: "#d0e3cc"},
+  {name: "하늘", bg: "#d2e1eb"},
+  {name: "분홍", bg: "#efccd8"},
+  {name: "보라", bg: "#e5dcf2"},
+  {name: "주황", bg: "#f5d9c0"},
+  {name: "흰색", bg: "#ffffff"},
+  {name: "검은색", bg: "#000000"},
+];
+
+/* ---------- 이미지 정보 ---------- */
+const META_MODES = new Set(["default", "off", "custom"]);
+function normalizeMetaMode(value) {
+  return META_MODES.has(value) ? value : "off";
+}
+function getSTContext() {
+  try {
+    return globalThis.SillyTavern?.getContext?.() || null;
+  } catch {
+    return null;
+  }
+}
+function getDefaultCharacterName() {
+  const context = getSTContext();
+  const name = context?.name2;
+  return typeof name === "string" ? name.trim() : "";
+}
+function getDefaultChatTitle() {
+  const context = getSTContext();
+  const chatId = context?.chatId;
+  if (typeof chatId !== "string" || !chatId.trim()) return "";
+  return chatId.replace(/\.jsonl$/i, "").trim();
+}
+function resolveMetaText(mode, customValue, defaultValue) {
+  const resolvedMode = normalizeMetaMode(mode);
+  if (resolvedMode === "off") return "";
+  if (resolvedMode === "custom") return String(customValue || "").trim();
+  return String(defaultValue || "").trim();
+}
+const WATERMARK_MARK = "READER.";
+const SHARE_REFERENCE_WIDTH = 1080;
+function getMetaMetrics(width) {
+  const scale = width / SHARE_REFERENCE_WIDTH;
+  return {
+    fontSize: Math.round(28 * scale),
+    lineStep: Math.round(42 * scale),
+    gapBefore: Math.round(18 * scale),
+    blockPadding: Math.round(24 * scale),
+    watermarkSize: Math.round(42 * scale),
+    watermarkInset: Math.round(45 * scale),
+  };
+}
+function getMetaBlockHeight(width, lineCount) {
+  if (!lineCount) return 0;
+  const metrics = getMetaMetrics(width);
+  return lineCount * metrics.lineStep + metrics.blockPadding;
+}
+function isWatermarkEnabled(settings = extension_settings[extensionName]) {
+  return !!settings?.useWatermark;
+}
+
+function getMetaLines(settings = extension_settings[extensionName]) {
+  const lines = [];
+  const title = resolveMetaText(settings?.chatTitleMode, settings?.chatTitleCustom, getDefaultChatTitle());
+  if (title) lines.push({text: title, alpha: 0.9});
+  const characterName = resolveMetaText(settings?.charNameMode, settings?.charNameCustom, getDefaultCharacterName());
+  if (characterName) lines.push({text: characterName, alpha: 0.68});
+  return lines;
+}
+
+/* ---------- 단어 치환 규칙 ---------- */
+function normalizeReplaceRules(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((rule) => rule && typeof rule === "object")
+    .map((rule) => ({
+      original: String(rule.original ?? ""),
+      replacement: String(rule.replacement ?? ""),
+      enabled: rule.enabled !== false,
+    }));
+}
+function migrateLegacyReplaceRules(source) {
+  const migrated = [];
+  for (let index = 1; index <= 4; index++) {
+    const original = source[`originalWord${index}`];
+    const replacement = source[`replacementWord${index}`];
+    if (original === undefined && replacement === undefined) continue;
+    if (!String(original ?? "").trim()) continue;
+    migrated.push({original: String(original), replacement: String(replacement ?? "")});
+  }
+  return migrated;
+}
+function getReplaceRules(settings = extension_settings[extensionName]) {
+  return normalizeReplaceRules(settings?.replaceRules);
+}
+function setReplaceRules(rules) {
+  extension_settings[extensionName].replaceRules = normalizeReplaceRules(rules);
 }
 function ensureFontSizeSettings() {
   const settings = extension_settings[extensionName];
@@ -260,7 +366,16 @@ function setupRangeValueTooltips() {
 
 async function initSettings() {
   extension_settings[extensionName] = {...defaultSettings, ...extension_settings[extensionName]};
+  applyExtensionTheme();
   ensureFontSizeSettings();
+  ensureHighlightTagNames();
+  {
+    const store = extension_settings[extensionName];
+    const existingRules = normalizeReplaceRules(store.replaceRules);
+    store.replaceRules = existingRules.length ? existingRules : migrateLegacyReplaceRules(store);
+    store.chatTitleMode = normalizeMetaMode(store.chatTitleMode);
+    store.charNameMode = normalizeMetaMode(store.charNameMode);
+  }
   const {
     fontFamily,
     fontSizeImage,
@@ -301,12 +416,9 @@ async function initSettings() {
     overlayOpacity,
     overlayColor,
     currentPreset,
-    footerText,
     footerLayoutMode,
     footerWidth,
     footerHeight,
-    footerColor,
-    footerBgColor,
     autoPreview,
     htmlMode,
     letterCase,
@@ -355,12 +467,9 @@ async function initSettings() {
   $("#bg_noise").val(bgNoise);
   $("#overlay_opacity").val(overlayOpacity);
   $("#overlay_color").val(overlayColor);
-  $("#footer_text").val(footerText);
   $("#footer_layout_mode").val(getFooterLayoutMode(extension_settings[extensionName]));
   $("#footer_width").val(parsePositiveInt(footerWidth, defaultSettings.footerWidth));
   $("#footer_height").val(parsePositiveInt(footerHeight, defaultSettings.footerHeight));
-  $("#footer_color").val(footerColor);
-  $("#footer_bg_color").val(footerBgColor || defaultSettings.footerBgColor);
   $("#preview_toggle").prop("checked", autoPreview);
   $("#html_toggle").prop("checked", htmlMode);
   $("#letter_control").prop("checked", letterCase);
@@ -371,8 +480,14 @@ async function initSettings() {
   $("#tti_auto_organize").prop("checked", autoOrganize);
 
   highlighterTags();
+  renderReplaceRules();
+  syncMetaUIState();
   applyHtmlModeUIState();
   updateFooterLayoutUIState();
+  syncSteppers();
+  syncRatioButtons();
+  syncOverlayColorButtons();
+  updateTextLengthBadge();
 
   if (currentPreset && extension_settings[extensionName].presets[currentPreset]) {
     applyPreset(currentPreset);
@@ -391,12 +506,19 @@ function loadStartupAssets() {
 // 프리셋
 function presetUI() {
   $("#create_preset").on("click", createPreset);
-  $("#save_preset").on("click", savePreset);
+  $("#save_preset, #save_preset_modal").on("click", savePreset);
   $("#delete_preset").on("click", deletePreset);
   $("#rename_preset").on("click", renamePreset);
   $("#preset_selector").on("change", selectPreset);
 
   loadPresetList();
+}
+function syncPresetModalState() {
+  const selected = $("#preset_selector").val();
+  const hasPreset = !!selected && selected !== "nonePreset";
+  $("#tti_preset_current_name").text(hasPreset ? selected : "선택된 프리셋 없음");
+  $("#save_preset_modal, #rename_preset, #delete_preset, #backup_preset").prop("disabled", !hasPreset);
+  $("#save_preset").prop("disabled", !hasPreset);
 }
 function getPresetSettings() {
   const settings = {...extension_settings[extensionName]};
@@ -406,6 +528,7 @@ function getPresetSettings() {
   delete settings.mesButtonEnabled;
   delete settings.extMenuShortcut;
   delete settings.autoOrganize;
+  delete settings.uiTheme;
   const imageFontSize = parseInt($("#tti_font_size_image").val(), 10);
   const htmlFontSize = parseInt($("#tti_font_size_html").val(), 10);
   settings.fontSizeImage = Number.isFinite(imageFontSize) ? imageFontSize : (settings.fontSizeImage || defaultSettings.fontSizeImage);
@@ -417,14 +540,17 @@ function getPresetSettings() {
     settings.fontFamily = oriFontFamily;
   }
   
-  settings.originalWord1 = $("#original_word_1").val();
-  settings.replacementWord1 = $("#replacement_word_1").val();
-  settings.originalWord2 = $("#original_word_2").val();
-  settings.replacementWord2 = $("#replacement_word_2").val();
-  settings.originalWord3 = $("#original_word_3").val();
-  settings.replacementWord3 = $("#replacement_word_3").val();
-  settings.originalWord4 = $("#original_word_4").val();
-  settings.replacementWord4 = $("#replacement_word_4").val();
+  settings.replaceRules = normalizeReplaceRules(
+    $("#tti_replace_list .replacement-rule").length ? collectReplaceRulesFromUI() : settings.replaceRules
+  );
+  delete settings.originalWord1;
+  delete settings.replacementWord1;
+  delete settings.originalWord2;
+  delete settings.replacementWord2;
+  delete settings.originalWord3;
+  delete settings.replacementWord3;
+  delete settings.originalWord4;
+  delete settings.replacementWord4;
   settings.useBackgroundColor = $("#use_background_color").prop("checked");
   settings.backgroundColor = $("#background_color").val();
   settings.useSecondBackgroundColor = $("#use_second_background_color").prop("checked");
@@ -432,17 +558,12 @@ function getPresetSettings() {
   settings.blockquoteFontColor = $("#tti_blockquote_font_color").val();
   settings.blockquoteBgColor = $("#tti_blockquote_bg_color").val();
   settings.blockquoteBorderColor = $("#tti_blockquote_border_color").val();
-  settings.footerText = $("#footer_text").val();
   settings.footerLayoutMode = $("#footer_layout_mode").val();
   settings.footerWidth = parsePositiveInt($("#footer_width").val(), defaultSettings.footerWidth);
   settings.footerHeight = parsePositiveInt($("#footer_height").val(), defaultSettings.footerHeight);
-  settings.footerColor = $("#footer_color").val();
-  settings.footerBgColor = $("#footer_bg_color").val();
   settings.autoPreview = $("#preview_toggle").prop("checked");
   settings.htmlMode = $("#html_toggle").prop("checked");
   settings.fontSize = settings.htmlMode ? settings.fontSizeHtml : settings.fontSizeImage;
-  settings.letterCase = $("#letter_control").is(":checked");
-  settings.unitControl = $("#unit_control").is(":checked");
   settings.setHighlighterTags = JSON.parse(
     JSON.stringify(extension_settings[extensionName].setHighlighterTags || [])
   );
@@ -475,6 +596,7 @@ function savePreset() {
   currentSettings.htmlMode = $("#html_toggle").prop("checked");
   extension_settings[extensionName].presets[presetName] = currentSettings;
   saveSettings();
+  toastr.success("프리셋이 저장되었습니다");
 }
 function renamePreset() {
   const oldName = $("#preset_selector").val();
@@ -517,6 +639,7 @@ function deletePreset() {
     const _autoOrganize = extension_settings[extensionName].autoOrganize;
     extension_settings[extensionName] = {
       ...defaultSettings,
+      uiTheme: extension_settings[extensionName].uiTheme,
       presets: extension_settings[extensionName].presets,
       currentPreset: null,
       dragOnlyFloat: _dragOnlyFloat,
@@ -560,35 +683,37 @@ function deletePreset() {
     $("#bg_noise").val(defaultSettings.bgNoise);
     $("#overlay_opacity").val(defaultSettings.overlayOpacity);
     $("#overlay_color").val(defaultSettings.overlayColor);
-    $("#original_word_1").val("");
-    $("#replacement_word_1").val("");
-    $("#original_word_2").val("");
-    $("#replacement_word_2").val("");
-    $("#original_word_3").val("");
-    $("#replacement_word_3").val("");
-    $("#original_word_4").val("");
-    $("#replacement_word_4").val("");
+    setReplaceRules([]);
+    renderReplaceRules();
     $("#use_background_color").prop("checked", defaultSettings.useBackgroundColor);
     $("#background_color").val(defaultSettings.backgroundColor);
     $("#use_second_background_color").prop("checked", defaultSettings.useSecondBackgroundColor);
     $("#second_background_color").val(defaultSettings.secondBackgroundColor);
     syncSelectedBackgroundUI();
-    $("#footer_text").val("");
     $("#footer_layout_mode").val(defaultSettings.footerLayoutMode);
     $("#footer_width").val(defaultSettings.footerWidth);
     $("#footer_height").val(defaultSettings.footerHeight);
-    $("#footer_color").val(defaultSettings.footerColor);
-    $("#footer_bg_color").val(defaultSettings.footerBgColor);
     $("#preview_toggle").prop("checked", defaultSettings.autoPreview);
     $("#html_toggle").prop("checked", defaultSettings.htmlMode);
     $("#letter_control").prop("checked", defaultSettings.letterCase);
     $("#unit_control").prop("checked", defaultSettings.unitControl);
     extension_settings[extensionName].setHighlighterTags = [];
+    extension_settings[extensionName].replaceRules = [];
+    extension_settings[extensionName].chatTitleMode = defaultSettings.chatTitleMode;
+    extension_settings[extensionName].chatTitleCustom = defaultSettings.chatTitleCustom;
+    extension_settings[extensionName].charNameMode = defaultSettings.charNameMode;
+    extension_settings[extensionName].charNameCustom = defaultSettings.charNameCustom;
+    extension_settings[extensionName].useWatermark = defaultSettings.useWatermark;
 
     highlighterTags();
+    renderReplaceRules();
+    syncMetaUIState();
     applyHtmlModeUIState();
     loadCustomBG();
     updateFooterLayoutUIState();
+    syncSteppers();
+    syncRatioButtons();
+    syncOverlayColorButtons();
   }
   saveSettings();
   updatePresetSelector();
@@ -610,6 +735,7 @@ function selectPreset() {
     const _autoOrganize = extension_settings[extensionName].autoOrganize;
     extension_settings[extensionName] = {
       ...defaultSettings,
+      uiTheme: extension_settings[extensionName].uiTheme,
       presets: extension_settings[extensionName].presets,
       currentPreset: null,
       dragOnlyFloat: _dragOnlyFloat,
@@ -654,25 +780,16 @@ function selectPreset() {
     $("#bg_noise").val(defaultSettings.bgNoise);
     $("#overlay_opacity").val(defaultSettings.overlayOpacity);
     $("#overlay_color").val(defaultSettings.overlayColor);
-    $("#original_word_1").val("");
-    $("#replacement_word_1").val("");
-    $("#original_word_2").val("");
-    $("#replacement_word_2").val("");
-    $("#original_word_3").val("");
-    $("#replacement_word_3").val("");
-    $("#original_word_4").val("");
-    $("#replacement_word_4").val("");
+    setReplaceRules([]);
+    renderReplaceRules();
     $("#use_background_color").prop("checked", defaultSettings.useBackgroundColor);
     $("#background_color").val(defaultSettings.backgroundColor);
     $("#use_second_background_color").prop("checked", defaultSettings.useSecondBackgroundColor);
     $("#second_background_color").val(defaultSettings.secondBackgroundColor);
     syncSelectedBackgroundUI();
-    $("#footer_text").val("");
     $("#footer_layout_mode").val(defaultSettings.footerLayoutMode);
     $("#footer_width").val(defaultSettings.footerWidth);
     $("#footer_height").val(defaultSettings.footerHeight);
-    $("#footer_color").val(defaultSettings.footerColor);
-    $("#footer_bg_color").val(defaultSettings.footerBgColor);
     $("#preview_toggle").prop("checked", defaultSettings.autoPreview);
     $("#html_toggle").prop("checked", defaultSettings.htmlMode);
     $("#letter_control").prop("checked", defaultSettings.letterCase);
@@ -680,9 +797,14 @@ function selectPreset() {
 
     extension_settings[extensionName].setHighlighterTags = [];
     highlighterTags();
+    renderReplaceRules();
+    syncMetaUIState();
     applyHtmlModeUIState();
     loadCustomBG();
     updateFooterLayoutUIState();
+    syncSteppers();
+    syncRatioButtons();
+    syncOverlayColorButtons();
 
     refreshPreview();
   } else if (presetName) {
@@ -702,16 +824,9 @@ function applyPreset(presetName) {
   extension_settings[extensionName].htmlMode = presetHtmlMode;
   $("#html_toggle").prop("checked", presetHtmlMode);
 
-  const wordPairs = [
-    {original: "originalWord1", replacement: "replacementWord1", id: "1"},
-    {original: "originalWord2", replacement: "replacementWord2", id: "2"},
-    {original: "originalWord3", replacement: "replacementWord3", id: "3"},
-    {original: "originalWord4", replacement: "replacementWord4", id: "4"},
-  ];
-  wordPairs.forEach(({original, replacement, id}) => {
-    if (preset[original] !== undefined) $("#original_word_" + id).val(preset[original]);
-    if (preset[replacement] !== undefined) $("#replacement_word_" + id).val(preset[replacement]);
-  });
+  const presetRules = normalizeReplaceRules(preset.replaceRules);
+  setReplaceRules(presetRules.length ? presetRules : migrateLegacyReplaceRules(preset));
+  renderReplaceRules();
 
   for (const [key, value] of Object.entries(preset)) {
     if (
@@ -724,6 +839,7 @@ function applyPreset(presetName) {
         "replacementWord3",
         "originalWord4",
         "replacementWord4",
+        "replaceRules",
         "setHighlighterTags",
         "fontSize",
         "fontSizeImage",
@@ -860,9 +976,6 @@ function applyPreset(presetName) {
       case "secondBackgroundColor":
         $("#second_background_color").val(value);
         break;
-      case "footerText":
-        $("#footer_text").val(value);
-        break;
       case "footerLayoutMode":
         $("#footer_layout_mode").val(getFooterLayoutMode({footerLayoutMode: value}));
         updateFooterLayoutUIState();
@@ -872,12 +985,6 @@ function applyPreset(presetName) {
         break;
       case "footerHeight":
         $("#footer_height").val(parsePositiveInt(value, defaultSettings.footerHeight));
-        break;
-      case "footerColor":
-        $("#footer_color").val(value);
-        break;
-      case "footerBgColor":
-        $("#footer_bg_color").val(value || defaultSettings.footerBgColor);
         break;
       case "autoPreview":
         $("#preview_toggle").prop("checked", value);
@@ -890,6 +997,10 @@ function applyPreset(presetName) {
         break;
       case "unitControl":
         $("#unit_control").prop("checked", value);
+        break;
+      case "chatTitleMode":
+      case "charNameMode":
+        extension_settings[extensionName][key] = normalizeMetaMode(value);
         break;
     }
   }
@@ -932,9 +1043,14 @@ function applyPreset(presetName) {
     extension_settings[extensionName].setHighlighterTags = [];
   }
 
+  ensureHighlightTagNames();
   highlighterTags();
+  syncMetaUIState();
   applyHtmlModeUIState();
   updateFooterLayoutUIState();
+  syncSteppers();
+  syncRatioButtons();
+  syncOverlayColorButtons();
   loadCustomBG();
   syncSelectedBackgroundUI();
   saveSettings();
@@ -964,6 +1080,7 @@ function updatePresetSelector(selectedPreset = null) {
   } else if (extension_settings[extensionName].currentPreset) {
     $selector.val(extension_settings[extensionName].currentPreset);
   }
+  syncPresetModalState();
 }
 function backupPreset() {
   const presetName = $("#preset_selector").val();
@@ -1020,294 +1137,6 @@ function presetBackupSys() {
   $("#import_preset").on("click", function () {
     $("#presetBackupSys").click();
   });
-}
-
-// 봇카드
-const cardDataTab = {};
-let oriCard = null;
-let oriCardType = null;
-
-function loadBotCard(dataType) {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = ".png,.json";
-
-  input.onchange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    oriCard = file;
-    oriCardType = file.name.endsWith(".json") ? "json" : "png";
-
-    const botData = file.name.endsWith(".json")
-      ? await MDFromJSON(file)
-      : await MDFromPNG(file);
-    if (botData) botDataClass(botData, dataType);
-  };
-
-  input.click();
-}
-async function MDFromJSON(file) {
-  const text = await file.text();
-  return JSON.parse(text);
-}
-async function MDFromPNG(file) {
-  const arrayBuffer = await file.arrayBuffer();
-  const dataView = new DataView(arrayBuffer);
-  let offset = 8;
-
-  while (offset < arrayBuffer.byteLength) {
-    const chunkLength = dataView.getUint32(offset);
-    offset += 4;
-    const chunkType = String.fromCharCode(
-      dataView.getUint8(offset),
-      dataView.getUint8(offset + 1),
-      dataView.getUint8(offset + 2),
-      dataView.getUint8(offset + 3)
-    );
-    offset += 4;
-
-    if (chunkType === "tEXt") {
-      let textData = "";
-      for (let i = 0; i < chunkLength; i++) {
-        textData += String.fromCharCode(dataView.getUint8(offset + i));
-      }
-      const [key, text] = textData.split("\0");
-      if (key.toLowerCase() === "chara" || key.toLowerCase() === "ccv3") {
-        const binary = atob(text.trim());
-        const uint8Array = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) {
-          uint8Array[i] = binary.charCodeAt(i);
-        }
-        const decoded = new TextDecoder("utf-8").decode(uint8Array);
-        return JSON.parse(decoded);
-      }
-    }
-    if (chunkType === "iTXt") {
-      let textData = "";
-      for (let i = 0; i < chunkLength; i++) {
-        textData += String.fromCharCode(dataView.getUint8(offset + i));
-      }
-      const parts = textData.split("\0");
-      const key = parts[0];
-      if (key.toLowerCase() === "chara" || key.toLowerCase() === "ccv3") {
-        const compressionFlag = parts[1] ? parts[1].charCodeAt(0) : 0;
-        const text = parts[parts.length - 1];
-        
-        if (compressionFlag === 0) {
-          const binary = atob(text.trim());
-          const uint8Array = new Uint8Array(binary.length);
-          for (let i = 0; i < binary.length; i++) {
-            uint8Array[i] = binary.charCodeAt(i);
-          }
-          const decoded = new TextDecoder("utf-8").decode(uint8Array);
-          return JSON.parse(decoded);
-        }
-      }
-    }
-
-    offset += chunkLength;
-    offset += 4;
-  }
-  return null;
-}
-function botDataClass(data) {
-  const oriCardData = data.data || data;
-  
-  cardDataTab.description = (oriCardData.description || "").trim();
-  cardDataTab.greeting = (oriCardData.first_mes || "").trim();
-  cardDataTab.scenario = (oriCardData.scenario || "").trim();
-  cardDataTab.json = JSON.stringify(oriCardData, null, 2);
-  cardDataTab.oriData = oriCardData;
-  cardDataTab.fullData = data;
-  
-  $(".bot-data[data-type]").removeClass("active");
-  $(`.bot-data[data-type="description"]`).addClass("active");
-  const activeTab = $(".bot-data[data-type].active").data("type") || "description";
-  $("#text_to_image").val(cardDataTab[activeTab] || "");
-  
-  $(".bot-data.botImporter").addClass("remover");
-  $(".bot-data:not(.botImporter)").prop("disabled", false);
-  refreshPreview();  
-}
-async function botCardSaver() {
-  if (!oriCard || !cardDataTab.oriData) {
-    return;
-  }
-  const currentTab = $(".bot-data[data-type].active").data("type");
-  if (currentTab) {
-    cardDataTab[currentTab] = $("#text_to_image").val();
-  }
-  const modifiedData = JSON.parse(JSON.stringify(cardDataTab.oriData));
-  modifiedData.description = cardDataTab.description;
-  modifiedData.first_mes = cardDataTab.greeting;
-  modifiedData.scenario = cardDataTab.scenario;
-
-  let latestData;
-  if (cardDataTab.fullData && cardDataTab.fullData.data) {
-    latestData = JSON.parse(JSON.stringify(cardDataTab.fullData));
-    latestData.data = modifiedData;
-    if (latestData.description !== undefined) latestData.description = modifiedData.description;
-    if (latestData.first_mes !== undefined) latestData.first_mes = modifiedData.first_mes;
-    if (latestData.scenario !== undefined) latestData.scenario = modifiedData.scenario;
-  } else {
-    latestData = modifiedData;
-  }
-  if (oriCardType === "json") {
-    cardToJSON(latestData, oriCard.name);
-  } else {
-    await cardToPNG(latestData, oriCard);
-  }
-}
-function cardToJSON(data, filename) {
-  const jsonStr = JSON.stringify(data, null, 2);
-  const blob = new Blob([jsonStr], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-async function cardToPNG(oriCardData, oriCard) {
-  const arrayBuffer = await oriCard.arrayBuffer();
-  const uint8Array = new Uint8Array(arrayBuffer);
-
-  const jsonStr = JSON.stringify(oriCardData);
-  const utf8Bytes = new TextEncoder().encode(jsonStr);
-  let binary = "";
-  for (let i = 0; i < utf8Bytes.length; i++) {
-    binary += String.fromCharCode(utf8Bytes[i]);
-  }
-  const encoded = btoa(binary);
-  const newChunks = [];
-  newChunks.push(textChunk("chara", encoded));
-  newChunks.push(textChunk("ccv3", encoded));
-  newChunks.push(ITxtChunk("chara", encoded));
-  const finalPNG = replaceChunks(uint8Array, newChunks);
-  const blob = new Blob([finalPNG], { type: "image/png" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = oriCard.name;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-function textChunk(key, encoded) {
-  const textContent = key + "\0" + encoded;
-  const textBytes = [];
-  for (let i = 0; i < textContent.length; i++) {
-    textBytes.push(textContent.charCodeAt(i));
-  }
-  const chunkType = [0x74, 0x45, 0x58, 0x74];
-  const chunkDataForCRC = [...chunkType, ...textBytes];
-  const crc = crc32(new Uint8Array(chunkDataForCRC));
-  
-  const chunkLength = textBytes.length;
-  const chunk = new Uint8Array(12 + chunkLength);
-  const view = new DataView(chunk.buffer);
-  view.setUint32(0, chunkLength, false);
-  chunk.set(chunkType, 4);
-  chunk.set(textBytes, 8);
-  view.setUint32(8 + chunkLength, crc, false);
-  
-  return chunk;
-}
-function ITxtChunk(key, encoded) {
-  const textContent = key + "\0\0\0\0\0" + encoded;
-  const textBytes = [];
-  for (let i = 0; i < textContent.length; i++) {
-    textBytes.push(textContent.charCodeAt(i));
-  }
-  const chunkType = [0x69, 0x54, 0x58, 0x74];
-  const chunkDataForCRC = [...chunkType, ...textBytes];
-  const crc = crc32(new Uint8Array(chunkDataForCRC));
-  const chunkLength = textBytes.length;
-  const chunk = new Uint8Array(12 + chunkLength);
-  const view = new DataView(chunk.buffer);
-  view.setUint32(0, chunkLength, false);
-  chunk.set(chunkType, 4);
-  chunk.set(textBytes, 8);
-  view.setUint32(8 + chunkLength, crc, false);
-  
-  return chunk;
-}
-function replaceChunks(uint8Array, newChunks) {
-  const chunks = [];
-  let offset = 0;
-  chunks.push(uint8Array.slice(0, 8));
-  offset = 8;
-  const view = new DataView(uint8Array.buffer, uint8Array.byteOffset);
-  while (offset < uint8Array.length) {
-    if (offset + 8 > uint8Array.length) break;
-    const length = view.getUint32(offset, false);
-    const type = String.fromCharCode(
-      uint8Array[offset + 4],
-      uint8Array[offset + 5],
-      uint8Array[offset + 6],
-      uint8Array[offset + 7]
-    );
-    const chunkTotalSize = 12 + length;
-    if (offset + chunkTotalSize > uint8Array.length) break;
-    let isChunk = false;
-    if (type === "tEXt" || type === "iTXt" || type === "zTXt") {
-      let key = "";
-      let i = 0;
-      while (offset + 8 + i < uint8Array.length && uint8Array[offset + 8 + i] !== 0) {
-        key += String.fromCharCode(uint8Array[offset + 8 + i]);
-        i++;
-      }
-      key = key.toLowerCase();
-      
-      if (key === "chara" || key === "ccv3") {
-        isChunk = true;
-      }
-    }
-    if (isChunk) {
-    } else {
-      chunks.push(uint8Array.slice(offset, offset + chunkTotalSize));
-    }
-    offset += chunkTotalSize;
-  }
-  let iendIndex = -1;
-  for (let i = chunks.length - 1; i >= 0; i--) {
-    const chunk = chunks[i];
-    if (chunk.length >= 8) {
-      const type = String.fromCharCode(chunk[4], chunk[5], chunk[6], chunk[7]);
-      if (type === "IEND") {
-        iendIndex = i;
-        break;
-      }
-    }
-  }
-  if (iendIndex !== -1) {
-    for (const newChunk of newChunks) {
-      chunks.splice(iendIndex, 0, newChunk);
-      iendIndex++;
-    }
-  } else {
-    chunks.push(...newChunks);
-  }
-  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-  const result = new Uint8Array(totalLength);
-  let position = 0;
-  for (const chunk of chunks) {
-    result.set(chunk, position);
-    position += chunk.length;
-  }
-  return result;
-}
-function crc32(data) {
-  let crc = 0xFFFFFFFF;
-  for (let i = 0; i < data.length; i++) {
-    crc = crc ^ data[i];
-    for (let j = 0; j < 8; j++) {
-      crc = (crc >>> 1) ^ (0xEDB88320 & -(crc & 1));
-    }
-  }
-  return (crc ^ 0xFFFFFFFF) >>> 0;
 }
 
 // 폰트 패밀리
@@ -1490,6 +1319,8 @@ function applyHtmlModeUIState() {
   $("#bg_image_url").prop("disabled", !htmlMode);
   $("#bg_url_btn").prop("disabled", !htmlMode);
   $(".tag-font-family").prop("disabled", htmlMode);
+  $(".tag-html-font-family").prop("disabled", !htmlMode);
+  syncSteppers();
 }
 
 // 배경이미지 로드
@@ -1814,6 +1645,17 @@ function getCanvasSize() {
       return {width: 700, height: 700};
   }
 }
+
+function getRenderScale(width, height) {
+  const MAX_AREA = 16000000;
+  const MAX_SIDE = 8192;
+  let scale = 2;
+  while (scale > 1 &&
+    (width * scale * height * scale > MAX_AREA || Math.max(width, height) * scale > MAX_SIDE)) {
+    scale -= 0.5;
+  }
+  return scale;
+}
 function aspectRatio(event) {
   extension_settings[extensionName].imageRatio = event.target.value;
   debouncedSaveSettings();
@@ -1834,63 +1676,17 @@ function unitControl(event) {
   extension_settings[extensionName].unitControl = event.target.checked;
   debouncedSaveSettings();
 }
-function setupWordReplacer() {
-  let originalSnapshot = null;
-  $("#apply_replacement").on("click", () => {
-    originalSnapshot = {
-      mainText: $("#text_to_image").val(),
-      switcherTexts: $("#tti_html_switcher_list .tti-html-switcher-text").map(function () {
-        return $(this).val();
-      }).get(),
-    };
-    replaceWords();
-  });
-  $("#restore_text").on("click", () => {
-    if (!originalSnapshot) return;
+function replaceWords(inputText) {
+  const letterCase = extension_settings[extensionName].letterCase;
+  const unitControl = extension_settings[extensionName].unitControl;
 
-    $("#text_to_image").val(originalSnapshot.mainText ?? "");
-
-    const $switcherList = $("#tti_html_switcher_list");
-    if ($switcherList.length) {
-      $switcherList.empty();
-      (originalSnapshot.switcherTexts || []).forEach((value) => {
-        if (typeof appendHtmlSwitcherInput === "function") {
-          appendHtmlSwitcherInput(value);
-        }
-      });
-      if (typeof syncHtmlSwitcherInputUIState === "function") {
-        syncHtmlSwitcherInputUIState();
-      }
-    }
-
-    refreshPreview();
-  });
-}
-function replaceWords() {
-  letterCase = extension_settings[extensionName].letterCase;
-  unitControl = extension_settings[extensionName].unitControl;
-
-  const wordGroup = [
-    {
-      original: $("#original_word_1").val().trim(),
-      replacement: $("#replacement_word_1").val(),
-    },
-    {
-      original: $("#original_word_2").val().trim(),
-      replacement: $("#replacement_word_2").val(),
-    },
-    {
-      original: $("#original_word_3").val().trim(),
-      replacement: $("#replacement_word_3").val(),
-    },
-    {
-      original: $("#original_word_4").val().trim(),
-      replacement: $("#replacement_word_4").val(),
-    },
-  ].filter(group => group.original);
+  const wordGroup = getReplaceRules()
+    .filter((rule) => rule.enabled)
+    .map((rule) => ({original: String(rule.original || "").trim(), replacement: rule.replacement}))
+    .filter(group => group.original);
 
   if (wordGroup.length === 0) {
-    return;
+    return String(inputText ?? "");
   }
 
   const applyWordReplacement = (inputText) => {
@@ -1948,11 +1744,7 @@ function replaceWords() {
     return text;
   };
 
-  $("#text_to_image").val(applyWordReplacement($("#text_to_image").val()));
-  $("#tti_html_switcher_list .tti-html-switcher-text").each(function () {
-    $(this).val(applyWordReplacement($(this).val()));
-  });
-  refreshPreview();
+  return applyWordReplacement(inputText);
 }
 function replaceString(text, original, replacement, letterCase, unitControl) {
   const specialChar = /[\s\.,;:!?\(\)\[\]{}"'<>\/\\\-_=\+\*&\^%\$#@~`|]/;
@@ -2174,22 +1966,7 @@ function blockquoteBorderColor(event) {
   debouncedSaveSettings();
   refreshPreview();
 }
-// 바닥글
-function footerText(event) {
-  extension_settings[extensionName].footerText = event.target.value;
-  debouncedSaveSettings();
-  refreshPreview();
-}
-function footerColor(event) {
-  extension_settings[extensionName].footerColor = event.target.value;
-  debouncedSaveSettings();
-  refreshPreview();
-}
-function footerBgColor(event) {
-  extension_settings[extensionName].footerBgColor = event.target.value;
-  debouncedSaveSettings();
-  refreshPreview();
-}
+// HTML 컨테이너
 function footerLayoutMode(event) {
   extension_settings[extensionName].footerLayoutMode = event.target.value === "full" ? "full" : "scroll";
   updateFooterLayoutUIState();
@@ -2235,7 +2012,7 @@ function getPreviewChunks() {
   }
 
   const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
-  return wrappingTexts(text, lineBreak === "byWord" ? "word" : "char");
+  return wrappingTexts(replaceWords(text), lineBreak === "byWord" ? "word" : "char");
 }
 function updatePreviewDownloadAllButton(itemCount) {
   const $previewTitle = $("#image_preview_box h4");
@@ -2256,8 +2033,48 @@ function updatePreviewDownloadAllButton(itemCount) {
 
   $dlAllBtn.remove();
 }
+let previewIndex = 0;
+function previewItemCount() {
+  return $("#image_preview_container .image-preview-item").length;
+}
+function setPreviewIndex(index) {
+  const total = previewItemCount();
+  const $stage = $(".tti-preview-stage");
+  if (!total) {
+    previewIndex = 0;
+    $stage.removeClass("has-multiple");
+    $(".tti-preview-count").text("");
+    return;
+  }
+  previewIndex = Math.min(Math.max(0, index), total - 1);
+  const $items = $("#image_preview_container .image-preview-item");
+  $items.removeClass("current").eq(previewIndex).addClass("current");
+  $stage.toggleClass("has-multiple", total > 1);
+  $(".tti-preview-count").text(total > 1 ? `${previewIndex + 1} / ${total}` : "");
+  $(".tti-preview-arrow.previous").prop("disabled", previewIndex === 0);
+  $(".tti-preview-arrow.next").prop("disabled", previewIndex === total - 1);
+}
+function setupPreviewCarousel() {
+  $(document).on("click", ".tti-preview-arrow.previous", () => setPreviewIndex(previewIndex - 1));
+  $(document).on("click", ".tti-preview-arrow.next", () => setPreviewIndex(previewIndex + 1));
+
+  let swipeStartX = null;
+  const stageSelector = ".tti-preview-stage";
+  $(document).on("pointerdown", stageSelector, function (event) {
+    if ($(event.target).closest(".tti-preview-arrow, .download-btn, .html-render-preview").length) return;
+    swipeStartX = event.clientX;
+  });
+  $(document).on("pointerup pointercancel", stageSelector, function (event) {
+    if (swipeStartX === null) return;
+    const delta = event.clientX - swipeStartX;
+    swipeStartX = null;
+    if (Math.abs(delta) < 45) return;
+    setPreviewIndex(previewIndex + (delta < 0 ? 1 : -1));
+  });
+}
 function renderPreviewContent() {
   const chunks = getPreviewChunks();
+  const keepIndex = previewIndex;
   const $container = $("#image_preview_container").empty();
 
   chunks.forEach((chunk, i) => {
@@ -2265,13 +2082,40 @@ function renderPreviewContent() {
   });
 
   updatePreviewDownloadAllButton(chunks.length);
+  setPreviewIndex(keepIndex);
 }
 const _debouncedRender = debounce(async () => {
+  if (isPreviewEditing()) { previewEditPending = true; return; }
   await ensurePreviewFontsLoaded();
+  if (isPreviewEditing()) { previewEditPending = true; return; }
+  if (!extension_settings[extensionName].autoPreview) return;
   renderPreviewContent();
 }, 150);
+let previewEditPending = false;
+function isPreviewEditing() {
+  const element = document.activeElement;
+  return !!element?.closest('.text-to-image-converter-settings, .tti-modal-backdrop') &&
+    (element.matches('textarea, input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"])') || element.isContentEditable);
+}
+function setupPreviewEditDeferral() {
+  document.addEventListener('focusout', () => {
+    setTimeout(() => {
+      if (previewEditPending && !isPreviewEditing()) {
+        previewEditPending = false;
+        refreshPreview();
+      }
+    }, 0);
+  });
+}
+function applyExtensionTheme() {
+  const theme = extension_settings[extensionName].uiTheme === 'light' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-tti-theme', theme);
+  $('#tti_dark_mode').prop('checked', theme === 'dark');
+}
 function refreshPreview() {
   const autoPreviewEnabled = !!extension_settings[extensionName].autoPreview;
+  if (autoPreviewEnabled && isPreviewEditing()) { previewEditPending = true; return; }
+  previewEditPending = false;
   const $refreshNotice = $(".refresh-preview");
 
   if (!autoPreviewEnabled) {
@@ -2287,6 +2131,7 @@ function refreshPreview() {
     $refreshNotice.addClass("shown");
     if ($previewContainer.children().length > 0) {
       $previewContainer.empty();
+      setPreviewIndex(0);
     }
     if ($dlAllButtons.length > 0) {
       $dlAllButtons.remove();
@@ -2324,6 +2169,7 @@ function restorePreviewAfterExtraction(forceRendered) {
   }
 
   $("#image_preview_container").empty();
+  setPreviewIndex(0);
   $("#image_preview_box h4 .dl_all").remove();
   $(".refresh-preview").addClass("shown");
 }
@@ -2368,17 +2214,737 @@ function setupHtmlSwitcherInputs() {
   syncHtmlSwitcherInputUIState();
 }
 
+/* =========================================================
+    UI: 단어 치환 목록
+========================================================= */
+function renderReplaceRules() {
+  const $list = $("#tti_replace_list");
+  if (!$list.length) return;
+  const rules = getReplaceRules();
+  $list.empty();
+  rules.forEach((rule, index) => {
+    const $row = $(`
+      <div class="replacement-rule" data-index="${index}">
+        <span class="rule-index">${index + 1}</span>
+        <label>
+          <small>원래 단어</small>
+          <input type="text" class="replacer_box rule-original" placeholder="예: 김뫄뫄||뫄뫄" />
+        </label>
+        <i class="rule-arrow">→</i>
+        <label>
+          <small>바꿀 단어</small>
+          <input type="text" class="replacer_box rule-replacement" placeholder="예: 깡캐" />
+        </label>
+        <button type="button" class="rule-delete" aria-label="${index + 1}번 규칙 삭제"><i class="fa-solid fa-xmark"></i></button>
+        <button type="button" class="rule-toggle" role="switch" aria-checked="${rule.enabled}" aria-label="${index + 1}번 치환 사용">${rule.enabled ? 'ON' : 'OFF'}</button>
+      </div>
+    `);
+    $row.find(".rule-original").val(rule.original);
+    $row.find(".rule-replacement").val(rule.replacement);
+    $row.toggleClass("is-disabled", !rule.enabled);
+    $list.append($row);
+  });
+}
+function collectReplaceRulesFromUI() {
+  const rules = [];
+  $("#tti_replace_list .replacement-rule").each(function () {
+    rules.push({
+      original: $(this).find(".rule-original").val() ?? "",
+      replacement: $(this).find(".rule-replacement").val() ?? "",
+      enabled: $(this).find(".rule-toggle").attr("aria-checked") === "true",
+    });
+  });
+  return rules;
+}
+function commitReplaceRulesFromUI() {
+  setReplaceRules(collectReplaceRulesFromUI());
+  debouncedSaveSettings();
+  refreshPreview();
+}
+function setupReplaceRuleUI() {
+  $(document).on("click", "#add_replace_rule", () => {
+    setReplaceRules([...collectReplaceRulesFromUI(), {original: "", replacement: ""}]);
+    renderReplaceRules();
+    saveSettings();
+    $("#tti_replace_list .replacement-rule:last-child .rule-original").trigger("focus");
+  });
+  $(document).on("click", "#tti_replace_list .rule-delete", function () {
+    const index = $(this).closest(".replacement-rule").data("index");
+    const rules = collectReplaceRulesFromUI();
+    rules.splice(index, 1);
+    setReplaceRules(rules);
+    renderReplaceRules();
+    saveSettings();
+    refreshPreview();
+  });
+  $(document).on("click", "#tti_replace_list .rule-toggle", function () {
+    const enabled = $(this).attr("aria-checked") !== "true";
+    $(this).attr("aria-checked", String(enabled)).text(enabled ? "ON" : "OFF");
+    $(this).closest(".replacement-rule").toggleClass("is-disabled", !enabled);
+    commitReplaceRulesFromUI();
+  });
+  $(document).on("input", "#tti_replace_list .replacer_box", commitReplaceRulesFromUI);
+}
+
+/* =========================================================
+    UI: 이미지 정보 표시
+========================================================= */
+const META_FIELDS = {
+  chat_title: {modeKey: "chatTitleMode", customKey: "chatTitleCustom", inputId: "chat_title_custom"},
+  char_name: {modeKey: "charNameMode", customKey: "charNameCustom", inputId: "char_name_custom"},
+};
+function syncMetaUIState() {
+  const settings = extension_settings[extensionName];
+  Object.entries(META_FIELDS).forEach(([key, field]) => {
+    const mode = normalizeMetaMode(settings[field.modeKey]);
+    const $segment = $(`.tti-segment[data-meta="${key}"]`);
+    $segment.find("button").removeClass("active");
+    $segment.find(`button[data-mode="${mode}"]`).addClass("active");
+    $segment.closest(".tti-meta-row").toggleClass("custom", mode === "custom");
+    $(`#${field.inputId}`).val(settings[field.customKey] || "");
+  });
+  $("#use_watermark").prop("checked", !!settings.useWatermark);
+}
+function setupMetaUI() {
+  $(document).on("click", ".tti-segment[data-meta] button", function () {
+    const key = $(this).closest(".tti-segment").data("meta");
+    const field = META_FIELDS[key];
+    if (!field) return;
+    extension_settings[extensionName][field.modeKey] = normalizeMetaMode($(this).data("mode"));
+    syncMetaUIState();
+    saveSettings();
+    refreshPreview();
+  });
+  $(document).on("input", "#chat_title_custom", function () {
+    extension_settings[extensionName].chatTitleCustom = $(this).val();
+    debouncedSaveSettings();
+    refreshPreview();
+  });
+  $(document).on("input", "#char_name_custom", function () {
+    extension_settings[extensionName].charNameCustom = $(this).val();
+    debouncedSaveSettings();
+    refreshPreview();
+  });
+  $(document).on("change", "#use_watermark", function () {
+    extension_settings[extensionName].useWatermark = $(this).prop("checked");
+    syncMetaUIState();
+    saveSettings();
+    refreshPreview();
+  });
+}
+
+/* =========================================================
+    UI: 조절 / 비율 버튼 / 오버레이 색
+========================================================= */
+const STEPPER_FORMATS = {
+  tti_font_size_image: (value) => `${Math.round(value)}`,
+  tti_font_size_html: (value) => `${Math.round(value)}`,
+  tti_line_height: (value) => value.toFixed(2),
+  tti_letter_spacing: (value) => `${Math.round(value * 100)}%`,
+  bg_brightness: (value) => `${Math.round(value)}%`,
+  bg_blur: (value) => `${Number(value.toFixed(1))}px`,
+  bg_grayscale: (value) => `${Math.round(value)}%`,
+  bg_hue: (value) => `${Math.round(value)}°`,
+  bg_noise: (value) => `${Math.round(value)}%`,
+  overlay_opacity: (value) => `${Math.round(value * 100)}%`,
+};
+function syncSteppers() {
+  $(".option-stepper[data-target]").each(function () {
+    const $stepper = $(this);
+    const targetId = $stepper.data("target");
+    const input = document.getElementById(targetId);
+    if (!input) return;
+    const value = parseFloat(input.value);
+    const min = parseFloat(input.min);
+    const max = parseFloat(input.max);
+    const format = STEPPER_FORMATS[targetId] || ((raw) => String(raw));
+    const locked = !!input.disabled;
+    $stepper.find(".stepper-display").text(Number.isFinite(value) ? format(value) : "-");
+    $stepper.find('.stepper-btn[data-dir="-1"]').prop("disabled", locked || !(value > min));
+    $stepper.find('.stepper-btn[data-dir="1"]').prop("disabled", locked || !(value < max));
+    $stepper.toggleClass("disabled", locked);
+  });
+}
+function stepStepper($stepper, direction) {
+  const targetId = $stepper.data("target");
+  const input = document.getElementById(targetId);
+  if (!input || input.disabled) return;
+  const step = parseFloat(input.step) || 1;
+  const min = parseFloat(input.min);
+  const max = parseFloat(input.max);
+  const current = parseFloat(input.value);
+  if (!Number.isFinite(current)) return;
+  const next = Number(Math.min(max, Math.max(min, current + direction * step)).toFixed(4));
+  if (next === current) return;
+  input.value = String(next);
+  $(input).trigger("change");
+  syncSteppers();
+}
+function syncRatioButtons() {
+  const ratio = $("#tti_ratio").val() || defaultSettings.imageRatio;
+  $(".tti-ratio-btn").each(function () {
+    $(this).toggleClass("active", $(this).data("ratio") === ratio);
+  });
+}
+function syncOverlayColorButtons() {
+  const color = String($("#overlay_color").val() || "").toLowerCase();
+  $(".overlay-color").each(function () {
+    $(this).toggleClass("active", String($(this).data("color")).toLowerCase() === color);
+  });
+}
+function setupCustomSelects() {
+  const selector = '.text-to-image-converter-settings select, .tti-modal-backdrop select';
+  const menu = $('<div class="tti-select-menu" role="listbox" hidden></div>').appendTo(document.body)[0];
+  let active = null;
+  function close() {
+    menu.hidden = true;
+    active?.nextElementSibling?.setAttribute('aria-expanded', 'false');
+    active = null;
+  }
+  function refresh() {
+    document.querySelectorAll(selector).forEach((select) => {
+      let button = select.nextElementSibling;
+      if (!button?.classList.contains('tti-select-trigger')) {
+        button = document.createElement('button');
+        button.type = 'button'; button.className = 'tti-select-trigger';
+        button.setAttribute('aria-haspopup', 'listbox');
+        button.setAttribute('aria-expanded', 'false');
+        select.classList.add('tti-custom-select-source');
+        select.after(button);
+        button.addEventListener('click', () => {
+          if (active === select) { close(); return; }
+          close(); active = select; menu.replaceChildren();
+          Array.from(select.options).filter((o) => !o.hidden).forEach((option) => {
+            const item = document.createElement('button');
+            item.type = 'button'; item.textContent = option.textContent;
+            item.setAttribute('role', 'option');
+            item.setAttribute('aria-selected', String(option.selected));
+            item.disabled = option.disabled || !!option.parentElement.disabled;
+            item.addEventListener('click', () => {
+              select.value = option.value; $(select).trigger('change'); refresh();
+              close(); button.focus({preventScroll: true});
+            });
+            menu.append(item);
+          });
+          button.setAttribute('aria-expanded', 'true'); menu.hidden = false;
+          const rect = button.getBoundingClientRect();
+          const below = innerHeight - rect.bottom - 8;
+          const up = below < 180 && rect.top > below;
+          const width = Math.min(Math.max(rect.width, 180), innerWidth - 16);
+          Object.assign(menu.style, {width: width + 'px', left: Math.max(8, Math.min(rect.left, innerWidth - width - 8)) + 'px',
+            top: up ? 'auto' : rect.bottom + 4 + 'px', bottom: up ? innerHeight - rect.top + 4 + 'px' : 'auto',
+            maxHeight: Math.max(60, Math.min(300, up ? rect.top - 8 : below)) + 'px'});
+          (menu.querySelector('[aria-selected="true"]:not(:disabled)') || menu.querySelector('button:not(:disabled)'))?.focus({preventScroll: true});
+        });
+      }
+      const text = select.selectedOptions[0]?.textContent || '선택';
+      if (button.textContent !== text) button.textContent = text;
+      if (button.disabled !== select.disabled) button.disabled = select.disabled;
+      const hidden = select.hidden || select.classList.contains('tti-hidden-native') ||
+        select.classList.contains('html-mode-hidden') || select.classList.contains('html-mode-only');
+      if (button.hidden !== hidden) button.hidden = hidden;
+    });
+  }
+  menu.addEventListener('keydown', (e) => {
+    if (['Escape', 'Tab'].includes(e.key)) {
+      const button = active?.nextElementSibling; close(); button?.focus({preventScroll: true});
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); }
+      return;
+    }
+    const items = Array.from(menu.querySelectorAll('button:not(:disabled)'));
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key) && items.length) {
+      e.preventDefault();
+      const i = items.indexOf(document.activeElement);
+      items[e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus();
+    }
+  });
+  document.addEventListener('pointerdown', (e) => { if (!menu.contains(e.target) && e.target !== active?.nextElementSibling) close(); });
+  document.addEventListener('scroll', (e) => { if (!menu.contains(e.target)) close(); }, true);
+  window.addEventListener('resize', close);
+  new MutationObserver((records) => {
+    if (records.some((r) => r.target instanceof Element && (r.target.matches('select,option,optgroup') ||
+      Array.from(r.addedNodes).some((n) => n instanceof Element && (n.matches('select') || n.querySelector('select')))))) refresh();
+  }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['disabled', 'class', 'selected', 'hidden']});
+  $(document).on('change click', '.text-to-image-converter-settings, .tti-modal-backdrop', () => queueMicrotask(refresh));
+  refresh();
+}
+function setupCompositeControls() {
+  setupCustomSelects();
+  $(".stepper-display").attr({role: "button", tabindex: "0", title: "클릭하여 숫자 입력"});
+  $(document).on("click keydown", ".stepper-display", function (event) {
+    if (event.type === "keydown" && !["Enter", " "].includes(event.key)) return;
+    event.preventDefault();
+    const $display = $(this);
+    const input = document.getElementById($display.closest(".option-stepper").data("target"));
+    if (!input || input.disabled || $display.next(".tti-stepper-input").length) return;
+    const scale = ["tti_letter_spacing", "overlay_opacity"].includes(input.id) ? 100 : 1;
+    const $edit = $('<input type="number" class="tti-stepper-input" aria-label="직접 숫자 입력" />')
+      .attr({min: Number(input.min) * scale, max: Number(input.max) * scale, step: Number(input.step) * scale})
+      .val(Number((Number(input.value) * scale).toFixed(4)));
+    $display.hide().after($edit);
+    let cancelled = false;
+    $edit.on("keydown", (e) => {
+      if (e.key === "Escape") { cancelled = true; $edit.trigger("blur"); }
+      if (e.key === "Enter") { e.preventDefault(); $edit.trigger("blur"); }
+    }).one("blur", () => {
+      const value = $edit[0].valueAsNumber / scale;
+      if (!cancelled && Number.isFinite(value)) {
+        const min = Number(input.min), max = Number(input.max), step = Number(input.step) || 1;
+        input.value = String(Math.min(max, Math.max(min, min + Math.round((value - min) / step) * step)));
+        $(input).trigger("change");
+      }
+      $edit.remove(); $display.show(); syncSteppers();
+    });
+    $edit[0].focus({preventScroll: true}); $edit[0].select();
+  });
+  $(document).on("click", ".tti-basic-color", function () {
+    const $input = $(this).closest(".tti-color-input-group").find('input[type="color"]');
+    if (!$input.prop("disabled")) $input.val($(this).data("color")).trigger("input").trigger("change");
+  });
+  $(document).on("click", ".option-stepper .stepper-btn", function () {
+    stepStepper($(this).closest(".option-stepper"), Number($(this).data("dir")));
+  });
+  $(document).on("change", ".option-stepper input[type='range']", syncSteppers);
+  $(document).on("click", ".tti-ratio-btn", function () {
+    if ($("#tti_ratio").prop("disabled")) return;
+    $("#tti_ratio").val($(this).data("ratio")).trigger("change");
+    syncRatioButtons();
+  });
+  $(document).on("click", ".overlay-color", function () {
+    $("#overlay_color").val($(this).data("color")).trigger("change");
+    syncOverlayColorButtons();
+  });
+  $(document).on("change", "#tti_ratio", syncRatioButtons);
+  $(document).on("change", "#overlay_color", syncOverlayColorButtons);
+}
+
+/* =========================================================
+    UI: 내용 편집 하단 패널
+========================================================= */
+function updateTextLengthBadge() {
+  const length = ($("#text_to_image").val() || "").length;
+  $("#tti_text_length_badge").text(`${length.toLocaleString()}자`);
+}
+function openTextModal() {
+  ensureFloatingHighlightTags();
+  syncRichEditorFromSource();
+  $("#tti_text_modal_backdrop").addClass("open");
+}
+function closeTextModal() {
+  closeModal($("#tti_text_modal_backdrop"));
+}
+function renderPenBar() {
+  const $list = $("#tti_pen_list");
+  if (!$list.length) return;
+  const tags = extension_settings[extensionName].setHighlighterTags || [];
+  $list.empty();
+  const usable = tags.filter((tag) => tag && tag.name);
+  if (!usable.length) {
+    $list.append('<span class="tti-pen-empty">형광펜 탭에서 펜을 먼저 만들어 주세요.</span>');
+    return;
+  }
+  usable.forEach((tag) => {
+    const swatchColor = tag.useTagBgColor ? tag.bgColor : (tag.useTagFontColor ? tag.fontColor : "transparent");
+    const $pen = $('<button type="button" class="tti-pen"></button>')
+      .attr("data-tag", tag.name)
+      .attr("title", `${tag.label || tag.name} 형광펜 적용`);
+    $pen.append($('<i class="tti-pen-dot"></i>').css("background", swatchColor || "transparent"));
+    $pen.append($("<span></span>").text(tag.label || tag.name));
+    $list.append($pen);
+  });
+}
+function applyPenToSelection(tagName) {
+  const textarea = document.getElementById("text_to_image");
+  if (!textarea || !tagName) return;
+  const {selectionStart: start, selectionEnd: end, value} = textarea;
+  if (start === end) {
+    toastLikeAlert("칠할 문장을 먼저 드래그해 주세요.");
+    return;
+  }
+  const selected = stripHighlightTags(value.slice(start, end));
+  const wrapped = `<${tagName}>${selected}</${tagName}>`;
+  textarea.value = value.slice(0, start) + wrapped + value.slice(end);
+  textarea.focus();
+  textarea.setSelectionRange(start, start + wrapped.length);
+  $(textarea).trigger("change");
+  updateTextLengthBadge();
+}
+function stripHighlightTags(text) {
+  const tags = (extension_settings[extensionName].setHighlighterTags || [])
+    .map((tag) => tag?.name)
+    .filter(Boolean)
+    .map((name) => escapeRegExp(name));
+  if (!tags.length) return text;
+  const pattern = new RegExp(`</?(?:${tags.join("|")})>`, "gi");
+  return text.replace(pattern, "");
+}
+function erasePenFromSelection() {
+  const textarea = document.getElementById("text_to_image");
+  if (!textarea) return;
+  const {selectionStart: start, selectionEnd: end, value} = textarea;
+  const hasSelection = start !== end;
+  const target = hasSelection ? value.slice(start, end) : value;
+  const cleaned = stripHighlightTags(target);
+  textarea.value = hasSelection ? value.slice(0, start) + cleaned + value.slice(end) : cleaned;
+  textarea.focus();
+  if (hasSelection) textarea.setSelectionRange(start, start + cleaned.length);
+  $(textarea).trigger("change");
+  updateTextLengthBadge();
+}
+function toastLikeAlert(message) {
+  if (typeof toastr !== "undefined" && toastr?.info) {
+    toastr.info(message);
+    return;
+  }
+  alert(message);
+}
+
+let savedRichEditorRange = null;
+let recentHighlightTagName = null;
+
+function getUsableHighlightTags() {
+  return (extension_settings[extensionName].setHighlighterTags || []).filter((tag) => tag?.name);
+}
+function ensureFloatingHighlightTags() {
+  if (getUsableHighlightTags().length) return;
+  extension_settings[extensionName].setHighlighterTags = HIGHLIGHT_PALETTE.map((item, index) => ({
+    name: `hl${index + 1}`,
+    label: item.name,
+    fontFamily: "useGlobal",
+    htmlFontFamily: "useGlobal",
+    fontColor: item.bg === "#000000" ? "#ffffff" : "#000000",
+    bgColor: item.bg,
+    fontSize: isHtmlModeEnabled() ? 14 : 24,
+    strokeWidth: "inherit",
+    useTagFontColor: item.bg === "#000000",
+    useTagBgColor: true,
+  }));
+  saveSettings();
+}
+function getHighlightTag(tagName) {
+  return getUsableHighlightTags().find((tag) => tag.name.toLowerCase() === String(tagName || "").toLowerCase());
+}
+function getHighlightSwatch(tag) {
+  if (!tag) return "#f7e8b4";
+  return tag.useTagBgColor ? tag.bgColor : (tag.useTagFontColor ? tag.fontColor : "#f7e8b4");
+}
+function createEditorHighlight(tagName) {
+  const tag = getHighlightTag(tagName);
+  const span = document.createElement("span");
+  span.className = "tti-editor-highlight";
+  span.dataset.tag = tag?.name || tagName;
+  if (tag?.useTagBgColor) span.style.backgroundColor = tag.bgColor;
+  if (tag?.useTagFontColor) span.style.color = tag.fontColor;
+  return span;
+}
+function appendEditorTextWithHighlights(container, source) {
+  const tags = getUsableHighlightTags();
+  if (!tags.length) {
+    container.append(document.createTextNode(source));
+    return;
+  }
+  const names = tags.map((tag) => escapeRegExp(tag.name)).join("|");
+  const pattern = new RegExp(`<(${names})>([\\s\\S]*?)<\\/\\1>`, "gi");
+  let cursor = 0;
+  let match;
+  while ((match = pattern.exec(source)) !== null) {
+    if (match.index > cursor) container.append(document.createTextNode(source.slice(cursor, match.index)));
+    const span = createEditorHighlight(match[1]);
+    appendEditorTextWithHighlights(span, match[2]);
+    container.append(span);
+    cursor = match.index + match[0].length;
+  }
+  if (cursor < source.length) container.append(document.createTextNode(source.slice(cursor)));
+}
+function syncRichEditorFromSource() {
+  const editor = document.getElementById("tti_rich_text_editor");
+  if (!editor) return;
+  editor.replaceChildren();
+  appendEditorTextWithHighlights(editor, String($("#text_to_image").val() || ""));
+  renderFloatingHighlightPalette();
+  hideFloatingHighlightMenu();
+}
+function isFillerBR(element) {
+  const parent = element.parentElement;
+  if (!parent) return false;
+  if (parent.id === "tti_rich_text_editor") return !element.nextSibling;
+  return (parent.tagName === "DIV" || parent.tagName === "P") && parent.childNodes.length === 1;
+}
+function serializeRichEditorNode(node) {
+  if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || "";
+  if (node.nodeType !== Node.ELEMENT_NODE) return "";
+  const element = /** @type {HTMLElement} */ (node);
+  if (element.tagName === "BR") return isFillerBR(element) ? "" : "\n";
+  const content = Array.from(element.childNodes).map(serializeRichEditorNode).join("");
+  if (element.classList.contains("tti-editor-highlight")) {
+    const tagName = element.dataset.tag;
+    return tagName ? stripHighlightTags(content).split('\n').map((line) => line ? `<${tagName}>${line}</${tagName}>` : '').join('\n') : content;
+  }
+  if (element.tagName === "DIV" || element.tagName === "P") return `${element.previousSibling ? "\n" : ""}${content}`;
+  return content;
+}
+function syncSourceFromRichEditor() {
+  const editor = document.getElementById("tti_rich_text_editor");
+  if (!editor) return;
+  const source = Array.from(editor.childNodes).map(serializeRichEditorNode).join("");
+  $("#text_to_image").val(source).trigger("input");
+}
+function unwrapEditorHighlights(root) {
+  if (root.nodeType === Node.ELEMENT_NODE && root.classList?.contains("tti-editor-highlight")) {
+    root.replaceWith(...Array.from(root.childNodes));
+  }
+  root.querySelectorAll?.(".tti-editor-highlight").forEach((span) => span.replaceWith(...Array.from(span.childNodes)));
+}
+function richRangeIsValid(range) {
+  const editor = document.getElementById("tti_rich_text_editor");
+  return !!editor && !!range && editor.contains(range.commonAncestorContainer) && !range.collapsed;
+}
+function getCurrentRichRange() {
+  const selection = window.getSelection();
+  if (selection?.rangeCount) {
+    const range = selection.getRangeAt(0);
+    if (richRangeIsValid(range)) return range.cloneRange();
+  }
+  return richRangeIsValid(savedRichEditorRange) ? savedRichEditorRange.cloneRange() : null;
+}
+function selectionTouchesHighlight(range) {
+  const editor = document.getElementById("tti_rich_text_editor");
+  return !!editor && Array.from(editor.querySelectorAll(".tti-editor-highlight")).some((span) => range.intersectsNode(span));
+}
+function showFloatingHighlightMenu(range) {
+  if (!richRangeIsValid(range)) return;
+  savedRichEditorRange = range.cloneRange();
+  const rect = range.getBoundingClientRect();
+  if (!rect.width && !rect.height) return;
+  const $menu = $("#tti_editor_highlight_menu");
+  const touchesHighlight = selectionTouchesHighlight(range);
+  $("#tti_highlight_apply").toggle(!touchesHighlight);
+  $("#tti_highlight_remove").toggle(touchesHighlight);
+  $menu.addClass("is-visible");
+  const menuRect = $menu[0].getBoundingClientRect();
+  const useTop = rect.top >= menuRect.height + 16;
+  const halfWidth = menuRect.width / 2;
+  const x = Math.max(halfWidth + 8, Math.min(window.innerWidth - halfWidth - 8, rect.left + rect.width / 2));
+  $menu
+    .toggleClass("placement-top", useTop)
+    .toggleClass("placement-bottom", !useTop)
+    .css({left: `${x}px`, top: `${useTop ? rect.top - 8 : rect.bottom + 8}px`})
+    .addClass("is-visible");
+}
+function hideFloatingHighlightMenu() {
+  savedRichEditorRange = null;
+  $("#tti_editor_highlight_menu").removeClass("is-visible palette-open");
+  $("#tti_highlight_color").attr("aria-expanded", "false");
+}
+function splitEditorHighlightAtMarker(marker) {
+  let wrapper = marker.parentElement?.closest(".tti-editor-highlight");
+  while (wrapper) {
+    const right = wrapper.cloneNode(false);
+    while (marker.nextSibling) right.append(marker.nextSibling);
+    wrapper.after(marker);
+    if (right.hasChildNodes()) marker.after(right);
+    if (!wrapper.hasChildNodes()) wrapper.remove();
+    wrapper = marker.parentElement?.closest(".tti-editor-highlight");
+  }
+}
+function replaceRichRangeHighlight(tagName = null) {
+  const range = getCurrentRichRange();
+  if (!range) return false;
+  const startMarker = document.createElement("i");
+  const endMarker = document.createElement("i");
+  startMarker.className = "tti-editor-range-marker";
+  endMarker.className = "tti-editor-range-marker";
+  const endRange = range.cloneRange();
+  endRange.collapse(false);
+  endRange.insertNode(endMarker);
+  const startRange = range.cloneRange();
+  startRange.collapse(true);
+  startRange.insertNode(startMarker);
+  splitEditorHighlightAtMarker(startMarker);
+  splitEditorHighlightAtMarker(endMarker);
+
+  const cleanRange = document.createRange();
+  cleanRange.setStartAfter(startMarker);
+  cleanRange.setEndBefore(endMarker);
+  const fragment = cleanRange.extractContents();
+  unwrapEditorHighlights(fragment);
+  if (tagName) {
+    const span = createEditorHighlight(tagName);
+    span.append(fragment);
+    cleanRange.insertNode(span);
+  } else {
+    cleanRange.insertNode(fragment);
+  }
+  startMarker.remove();
+  endMarker.remove();
+  document.getElementById("tti_rich_text_editor")?.normalize();
+  return true;
+}
+function applyFloatingHighlight(tagName) {
+  const tag = getHighlightTag(tagName || recentHighlightTagName) || getUsableHighlightTags()[0];
+  if (!tag || !replaceRichRangeHighlight(tag.name)) return;
+  recentHighlightTagName = tag.name;
+  syncSourceFromRichEditor();
+  renderFloatingHighlightPalette();
+  window.getSelection()?.removeAllRanges();
+  hideFloatingHighlightMenu();
+}
+function removeFloatingHighlight() {
+  if (!replaceRichRangeHighlight()) return;
+  syncSourceFromRichEditor();
+  window.getSelection()?.removeAllRanges();
+  hideFloatingHighlightMenu();
+}
+function renderFloatingHighlightPalette() {
+  const tags = getUsableHighlightTags();
+  if (!tags.length) return;
+  if (!getHighlightTag(recentHighlightTagName)) recentHighlightTagName = tags[0].name;
+  const $palette = $("#tti_highlight_palette").empty();
+  tags.forEach((tag) => {
+    $("<button type=\"button\"></button>")
+      .attr({"data-tag": tag.name, "aria-label": `${tag.label || tag.name} 선택`, title: tag.label || tag.name})
+      .toggleClass("active", tag.name === recentHighlightTagName)
+      .css("--palette-color", getHighlightSwatch(tag))
+      .appendTo($palette);
+  });
+  $("#tti_highlight_color").css("--palette-color", getHighlightSwatch(getHighlightTag(recentHighlightTagName)));
+}
+function setupRichTextHighlighter() {
+  setupPreviewEditDeferral();
+  $(document).on('change', '#tti_dark_mode', function () {
+    extension_settings[extensionName].uiTheme = this.checked ? 'dark' : 'light';
+    applyExtensionTheme();
+    saveSettings();
+  });
+  $("#tti_editor_highlight_menu").appendTo("#tti_text_modal_backdrop");
+  document.getElementById("tti_rich_text_editor")?.addEventListener("scroll", hideFloatingHighlightMenu, {passive: true});
+  document.querySelector(".tti-bottom-sheet")?.addEventListener("scroll", hideFloatingHighlightMenu, {passive: true});
+  window.addEventListener("resize", hideFloatingHighlightMenu);
+  $(document).on("input", "#tti_rich_text_editor", syncSourceFromRichEditor);
+  $(document).on("pointerup keyup", "#tti_rich_text_editor", function () {
+    window.setTimeout(() => {
+      const selection = window.getSelection();
+      const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+      if (richRangeIsValid(range)) showFloatingHighlightMenu(range);
+      else hideFloatingHighlightMenu();
+    }, 0);
+  });
+  $(document).on("pointerdown", "#tti_editor_highlight_menu", (event) => event.preventDefault());
+  $(document).on("mousedown", "#tti_editor_highlight_menu", (event) => event.preventDefault());
+  $(document).on('paste', '#tti_rich_text_editor', function (event) {
+    event.preventDefault();
+    const text = event.originalEvent.clipboardData?.getData('text/plain') || '';
+    document.execCommand('insertText', false, text);
+    syncSourceFromRichEditor();
+  });
+  $(document).on('keydown', '#tti_rich_text_editor', function (event) {
+    if (event.key === 'Enter' && !event.originalEvent.isComposing) {
+      event.preventDefault();
+      document.execCommand('insertText', false, '\n');
+      syncSourceFromRichEditor();
+    }
+  });
+  $(document).on('click', '#tti_rich_text_editor .tti-editor-highlight', function () {
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed) return;
+    const range = document.createRange();
+    range.selectNodeContents(this);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    showFloatingHighlightMenu(range);
+  });
+  $(document).on("click", "#tti_highlight_apply", () => applyFloatingHighlight());
+  $(document).on("click", "#tti_highlight_remove", removeFloatingHighlight);
+  $(document).on("click", "#tti_highlight_color", function () {
+    const open = !$("#tti_editor_highlight_menu").hasClass("palette-open");
+    $("#tti_editor_highlight_menu").toggleClass("palette-open", open);
+    $(this).attr("aria-expanded", String(open));
+  });
+  $(document).on("click", "#tti_highlight_palette button", function () {
+    applyFloatingHighlight($(this).data("tag"));
+  });
+  $(document).on("pointerdown", function (event) {
+    if (!$(event.target).closest("#tti_rich_text_editor, #tti_editor_highlight_menu").length) hideFloatingHighlightMenu();
+  });
+}
+function openModal(id) {
+  $(`#${id}`).addClass("open");
+}
+function closeModal($backdrop) {
+  if (!$backdrop.length) return;
+  const wasText = $backdrop.is("#tti_text_modal_backdrop");
+  $backdrop.removeClass("open");
+  if ($backdrop.is("#tti_pen_settings_backdrop")) {
+    $("#tti_pen_settings_body").empty();
+    highlighterTags();
+  }
+  if (wasText) {
+    hideFloatingHighlightMenu();
+    updateTextLengthBadge();
+    refreshPreview();
+  }
+}
+function closeTopModal() {
+  const $open = $(".tti-modal-backdrop.open").last();
+  closeModal($open);
+}
+function setupModals() {
+  $(document).on("click", "#tti_open_text_modal", openTextModal);
+  $(document).on("click", "#tti_open_replace_modal", () => openModal("tti_replace_modal_backdrop"));
+  $(document).on("click", "#tti_open_md_modal", () => openModal("tti_md_modal_backdrop"));
+  $(document).on("click", "#tti_open_preset_modal", () => {
+    syncPresetModalState();
+    openModal("tti_preset_modal_backdrop");
+  });
+  $(document).on("change", "#preset_selector", syncPresetModalState);
+  $(document).on("click", "#tti_options_gear", () => openModal("tti_settings_modal_backdrop"));
+  $(document).on("click", "#how_to_use", () => openModal("tti_help_modal_backdrop"));
+  $(document).on("click", ".tti-modal-close", function () {
+    closeModal($(this).closest(".tti-modal-backdrop"));
+  });
+  $(document).on("mousedown", ".tti-modal-backdrop", function (event) {
+    if (event.target === this) closeModal($(this));
+  });
+  $(document).on("keydown", function (event) {
+    if (event.key === "Escape" && $(".tti-modal-backdrop.open").length) closeTopModal();
+  });
+  $(document).on("input", "#text_to_image", updateTextLengthBadge);
+  $(document).on("click", "#tti_pen_list .tti-pen", function () {
+    applyPenToSelection($(this).data("tag"));
+  });
+  $(document).on("click", "#tti_pen_erase", erasePenFromSelection);
+}
+
 // 하이라이터 태그
+function nextHighlightTagName() {
+  const used = new Set(
+    (extension_settings[extensionName].setHighlighterTags || [])
+      .map((tag) => String(tag?.name || "").toLowerCase())
+      .filter(Boolean)
+  );
+  for (let index = 1; index < 999; index++) {
+    const candidate = `hl${index}`;
+    if (!used.has(candidate)) return candidate;
+  }
+  return `hl${Date.now()}`;
+}
 function highlighterTags() {
   const highlightContainer = $("#custom-highlighter .highlighter-lists");
   highlightContainer.empty();
   const highlightTags = extension_settings[extensionName].setHighlighterTags || [];
   highlightTags.forEach((tag, index) => {
+    const swatchColor = tag.useTagBgColor ? tag.bgColor : (tag.useTagFontColor ? tag.fontColor : "transparent");
+    const swatchTextColor = tag.useTagFontColor ? tag.fontColor : "inherit";
     const highlightTagItem = $(`
       <div class="tag-item" data-index="${index}">
+        <div class="tag-card-preview"><span></span></div>
+        <button type="button" class="buttons tti-manage-pen">관리</button>
         <div class="tag-item-left">
-          <input type="text" class="tag-name" placeholder="태그이름" value="${tag.name}" />
-          <div>            
+          <div class="tag-item-head">
+            <span class="tag-swatch">가</span>
+            <input type="text" class="tag-name" placeholder="펜 이름 (예: 강조)" />
+          </div>
+          <div class="tag-item-row">
             <select class="tag-font-family" data-html-hide="tag_font_family">
               <option value="useGlobal" ${!tag.fontFamily || tag.fontFamily === "useGlobal" ? "selected" : ""}>전역 폰트 사용</option>
             </select>
@@ -2389,36 +2955,53 @@ function highlighterTags() {
               <option value="GangwonEducationModuche" ${tag.htmlFontFamily === "GangwonEducationModuche" ? "selected" : ""}>강원교육모두체</option>
               <option value="OngleipParkDahyeon" ${tag.htmlFontFamily === "OngleipParkDahyeon" ? "selected" : ""}>온글잎 박다현체</option>
             </select>
-            <input type="number" class="tag-font-size" value="${tag.fontSize}" min="12" max="50" />
-            <select class="tag-stroke-width">
+            <input type="number" class="tag-font-size" value="${tag.fontSize}" min="12" max="50" title="글자 크기" />
+            <select class="tag-stroke-width" title="두께">
               <option value="inherit" ${!tag.strokeWidth || tag.strokeWidth === "inherit" ? "selected" : ""}>전역</option>
               <option value="0" ${tag.strokeWidth === "0" ? "selected" : ""}>기본</option>
               <option value="0.8" ${tag.strokeWidth === "0.8" ? "selected" : ""}>세미 볼드</option>
               <option value="1.5" ${tag.strokeWidth === "1.5" ? "selected" : ""}>볼드</option>
             </select>
           </div>
-          <div>
-            <div class="font-color-container">
+          <div class="tag-item-row">
+            <label class="tag-color-chip">
               <input type="checkbox" class="use-tag-font-color" ${tag.useTagFontColor ? "checked" : ""} />
+              글자색
               <input type="color" class="tag-font-color" value="${tag.fontColor}" ${!tag.useTagFontColor ? "disabled" : ""} />
-            </div>
-            <div class="bg-color-container">
+            </label>
+            <label class="tag-color-chip">
               <input type="checkbox" class="use-tag-bg-color" ${tag.useTagBgColor ? "checked" : ""} />
-              <input type="color" class="tag-bg-color" value="${tag.bgColor}" ${!tag.useTagBgColor ? "disabled" : ""} />       
-            </div>
+              형광색
+              <input type="color" class="tag-bg-color" value="${tag.bgColor}" ${!tag.useTagBgColor ? "disabled" : ""} />
+            </label>
           </div>
-          </div>
-        <button class="delete-tag-btn buttons clear"><i class="fa-solid fa-eraser"></i></button>
+        </div>
+        <button class="delete-tag-btn buttons clear" title="삭제"><i class="fa-solid fa-trash"></i></button>
       </div>
     `);
-    
+
+    highlightTagItem.find(".tag-name").val(tag.label || tag.name || "");
+    highlightTagItem.find(".tag-swatch").css({
+      background: swatchColor || "transparent",
+      color: swatchTextColor,
+    });
     highlighterFonts(highlightTagItem.find('.tag-font-family'), tag.fontFamily);
-    
+
     highlightContainer.append(highlightTagItem);
+    syncTagSwatch(highlightTagItem);
   });
-  const addBtn = $('<button class="add-tag-btn buttons">추가</button>');
+  const addBtn = $('<button class="add-tag-btn buttons"><i class="fa-solid fa-plus"></i> 형광펜 추가</button>');
   highlightContainer.append(addBtn);
+  renderPenBar();
   applyHtmlModeUIState();
+  installBasicColorPalettes();
+}
+function installBasicColorPalettes() {
+  $('.text-to-image-converter-settings input[type="color"], .tti-modal input[type="color"]').each(function () {
+    if ($(this).parent().hasClass("tti-color-input-group") || this.id === "overlay_color") return;
+    $(this).wrap('<span class="tti-color-input-group"></span>');
+    $(this).after('<button type="button" class="tti-basic-color" data-color="#ffffff" style="--swatch:#fff" aria-label="흰색"></button><button type="button" class="tti-basic-color" data-color="#000000" style="--swatch:#000" aria-label="검은색"></button>');
+  });
 }
 async function highlighterFonts(fontOption, selectedFont) {
   const fonts = await fetchExtensionJSON("font-family.json");
@@ -2437,30 +3020,69 @@ function addHighlightTag() {
   if (!extension_settings[extensionName].setHighlighterTags) {
     extension_settings[extensionName].setHighlighterTags = [];
   }
-  extension_settings[extensionName].setHighlighterTags.push({
-    name: "",
+  const tags = extension_settings[extensionName].setHighlighterTags;
+  const palette = HIGHLIGHT_PALETTE[tags.length % HIGHLIGHT_PALETTE.length];
+  tags.push({
+    name: nextHighlightTagName(),
+    label: palette.name,
     fontFamily: "useGlobal",
     htmlFontFamily: "useGlobal",
-    fontColor: "#000000",
-    bgColor: "#ffffff",
+    fontColor: palette.bg === "#000000" ? "#ffffff" : "#000000",
+    bgColor: palette.bg,
     fontSize: isHtmlModeEnabled() ? 14 : 24,
     strokeWidth: "inherit",
-    useTagFontColor: false,
-    useTagBgColor: false,
+    useTagFontColor: palette.bg === "#000000",
+    useTagBgColor: true,
   });
   highlighterTags();
   saveSettings();
+  refreshPreview();
+}
+function ensureHighlightTagNames() {
+  const tags = extension_settings[extensionName].setHighlighterTags;
+  if (!Array.isArray(tags)) {
+    extension_settings[extensionName].setHighlighterTags = [];
+    return;
+  }
+  tags.forEach((tag) => {
+    if (!tag || typeof tag !== "object") return;
+    if (!tag.name) tag.name = nextHighlightTagName();
+    if (tag.label === undefined) tag.label = tag.name;
+  });
 }
 function deleteHighlightTag(index) {
   extension_settings[extensionName].setHighlighterTags.splice(index, 1);
+  $("#tti_pen_settings_backdrop").removeClass("open");
+  $("#tti_pen_settings_body").empty();
   highlighterTags();
   saveSettings();
   refreshPreview();
 }
 function updateHighlightTag(index, field, value) {
   extension_settings[extensionName].setHighlighterTags[index][field] = value;
+  $(".tag-item").filter(function () { return Number($(this).data("index")) === Number(index); }).each(function () { syncTagSwatch($(this)); });
   saveSettings();
   refreshPreview();
+}
+function syncTagSwatch($item) {
+  const index = $item.data("index");
+  const tag = (extension_settings[extensionName].setHighlighterTags || [])[index];
+  if (!tag) return;
+  const settings = extension_settings[extensionName];
+  const family = isHtmlModeEnabled() ? tag.htmlFontFamily : tag.fontFamily;
+  const resolvedFamily = !family || family === "useGlobal" ? (isHtmlModeEnabled() ? getHtmlFontFace(settings) : settings.fontFamily) : family;
+  const stroke = tag.strokeWidth === "inherit" ? settings.strokeWidth : tag.strokeWidth;
+  $item.find(".tag-card-preview > span").text(tag.label || tag.name || "형광펜 미리보기").css({
+    background: tag.useTagBgColor ? tag.bgColor : "transparent",
+    color: tag.useTagFontColor ? tag.fontColor : settings.fontColor,
+    fontFamily: getCSSFontFamily(resolvedFamily),
+    webkitTextStroke: `${Number(stroke) || 0}px currentColor`,
+  });
+  $item.find(".tag-swatch").css({
+    background: tag.useTagBgColor ? tag.bgColor : (tag.useTagFontColor ? tag.fontColor : "transparent"),
+    color: tag.useTagFontColor ? tag.fontColor : "inherit",
+  });
+  renderPenBar();
 }
 
 // 마크다운
@@ -2606,12 +3228,13 @@ function wrappingTexts(text, mode = "word") {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   const { width, height } = getCanvasSize();
-  const maxWidth = width - 80;
+  const maxWidth = width * 0.8;
   const fontSize = getActiveFontSize(settings);
   const lineHeight = fontSize * parseFloat(settings.fontLineHeight);
 
   const fullSize = settings.imageRatio === "full";
-  const maxLines = fullSize ? Infinity : Math.floor((height - 80 - lineHeight) / lineHeight);
+  const metaReserve = getMetaBlockHeight(width, getMetaLines(settings).length);
+  const maxLines = fullSize ? Infinity : Math.floor((height - 80 - lineHeight - metaReserve) / lineHeight);
 
   const pages = [];
   let currentPage = [];
@@ -2815,25 +3438,34 @@ function generateTextImage(chunk, index) {
   const secondBgColor = settings.secondBackgroundColor;
 
   const isFullSize = settings.imageRatio === "full";
+  const metaLines = getMetaLines(settings);
+  const metaMetrics = getMetaMetrics(width);
+  const metaBlockHeight = getMetaBlockHeight(width, metaLines.length);
+  let metaStartY = 0;
   const calcHeight = isFullSize
-    ? Math.max(700, chunk.length * lineHeight + 160)
+    ? Math.max(700, chunk.length * lineHeight + 160 + metaBlockHeight)
     : height;
 
+  const renderScale = getRenderScale(width, calcHeight);
   const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = calcHeight;
+  canvas.width = Math.round(width * renderScale);
+  canvas.height = Math.round(calcHeight * renderScale);
   const ctx = canvas.getContext("2d");
+  ctx.scale(renderScale, renderScale);
+  ctx.textRendering = "geometricPrecision";
+  ctx.lineJoin = "round";
+  ctx.miterLimit = 2;
 
   const drawText = () => {
     const strokeWidth = parseFloat(settings.strokeWidth) || 0;
 
     const totalTextHeight = chunk.length * lineHeight;
-    const footerHeight = 30;
-    let y = Math.max((calcHeight - totalTextHeight - footerHeight) / 2 + lineHeight, 40 + lineHeight / 2);
+    // Match silly-reader's alphabetic baseline so line spacing does not push the block toward the watermark.
+    let y = Math.max((calcHeight - totalTextHeight - metaBlockHeight) / 2 + fontSize, 40 + fontSize);
     const setAlign = settings.fontAlign || "left";
 
     const lineBreak = settings.lineBreak || "byWord";
-    const maxLineWidth = width - 80;
+    const maxLineWidth = width * 0.8;
 
     function setFont(span) {
       const fontWeight = span.bold ? "bold" : settings.fontWeight;
@@ -2922,8 +3554,8 @@ function generateTextImage(chunk, index) {
     }
     function getAlignedX(totalTextWidth) {
       if (setAlign === "center") return width / 2 - totalTextWidth / 2;
-      if (setAlign === "right") return width - totalTextWidth - 40;
-      return 40;
+      if (setAlign === "right") return width * 0.9 - totalTextWidth;
+      return width * 0.1;
     }
     function isHrRenderLine(lineData) {
       if (!lineData) return false;
@@ -2933,8 +3565,8 @@ function generateTextImage(chunk, index) {
       return Array.isArray(lineData.spans) && lineData.spans.length === 1 && !!lineData.spans[0]?.isHr;
     }
     function renderHrLine(yPos) {
-      const startX = 40;
-      const endX = width - 40;
+      const startX = width * 0.1;
+      const endX = width * 0.9;
       const centerY = yPos - lineHeight * 0.45;
       const lineColor = settings.fontColor || "#000000";
       const gradient = ctx.createLinearGradient(startX, centerY, endX, centerY);
@@ -3033,6 +3665,8 @@ function generateTextImage(chunk, index) {
         y += lineHeight;
       }
     }
+
+    metaStartY = y;
   };
 
   const textWallpaper = (img) => {
@@ -3057,12 +3691,14 @@ function generateTextImage(chunk, index) {
       } else {
         const scale = width / img.width;
         const tempCanvas = document.createElement("canvas");
-        tempCanvas.width = width;
-        tempCanvas.height = img.height * scale;
+        tempCanvas.width = Math.round(width * renderScale);
+        tempCanvas.height = Math.round(img.height * scale * renderScale);
         const tempCtx = tempCanvas.getContext("2d");
         tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
-        
-        ctx.fillStyle = ctx.createPattern(tempCanvas, "repeat");
+
+        const pattern = ctx.createPattern(tempCanvas, "repeat");
+        pattern.setTransform?.(new DOMMatrix().scale(1 / renderScale));
+        ctx.fillStyle = pattern;
         ctx.fillRect(0, 0, width, calcHeight);
       }
     } else if (fillMode === "mix-top" || fillMode === "mix-bottom") {
@@ -3074,9 +3710,10 @@ function generateTextImage(chunk, index) {
       const offsetY = fillMode === "mix-top" ? 0 : calcHeight - drawHeight;
       
       const tempCanvas = document.createElement("canvas");
-      tempCanvas.width = width;
-      tempCanvas.height = calcHeight;
+      tempCanvas.width = Math.round(width * renderScale);
+      tempCanvas.height = Math.round(calcHeight * renderScale);
       const tempCtx = tempCanvas.getContext("2d");
+      tempCtx.scale(renderScale, renderScale);
       tempCtx.drawImage(img, 0, offsetY, drawWidth, drawHeight);
       
       const gradientHeight = Math.min(drawHeight * 0.4, calcHeight * 0.3);
@@ -3093,7 +3730,7 @@ function generateTextImage(chunk, index) {
       tempCtx.fillStyle = gradient;
       tempCtx.fillRect(0, 0, width, calcHeight);
       
-      ctx.drawImage(tempCanvas, 0, 0);
+      ctx.drawImage(tempCanvas, 0, 0, width, calcHeight);
     } else {
       if (useBgColor) {
         drawBackground();
@@ -3116,19 +3753,28 @@ function generateTextImage(chunk, index) {
     }
 
     let filterEffects = [];
-    if (settings.bgBlur > 0) filterEffects.push(`blur(${settings.bgBlur}px)`);
+    if (settings.bgBlur > 0) filterEffects.push(`blur(${settings.bgBlur * renderScale}px)`);
     if (settings.bgBrightness !== undefined)
       filterEffects.push(`brightness(${settings.bgBrightness}%)`);
     if (settings.bgHue !== undefined) filterEffects.push(`hue-rotate(${settings.bgHue}deg)`);
 
     if (filterEffects.length > 0) {
+      const blurPad = Math.ceil((Number(settings.bgBlur) || 0) * 3);
+      const snapshot = document.createElement("canvas");
+      snapshot.width = canvas.width;
+      snapshot.height = canvas.height;
+      snapshot.getContext("2d").drawImage(canvas, 0, 0);
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
       ctx.filter = filterEffects.join(" ");
-      ctx.drawImage(canvas, 0, 0, width, calcHeight);
+      ctx.drawImage(snapshot, -blurPad, -blurPad, width + blurPad * 2, calcHeight + blurPad * 2);
       ctx.filter = "none";
     }
 
     if (settings.bgGrayscale > 0) {
-      const imageData = ctx.getImageData(0, 0, width, calcHeight);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
       const grayscaleFactor = settings.bgGrayscale / 100;
       for (let i = 0; i < data.length; i += 4) {
@@ -3141,7 +3787,7 @@ function generateTextImage(chunk, index) {
     }
 
     if (settings.bgNoise > 0) {
-      const imageData = ctx.getImageData(0, 0, width, calcHeight);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
       const noiseLevel = settings.bgNoise / 100;
       for (let i = 0; i < data.length; i += 4) {
@@ -3159,20 +3805,37 @@ function generateTextImage(chunk, index) {
       ctx.fillStyle = `${settings.overlayColor}${Math.round(settings.overlayOpacity * 255)
         .toString(16)
         .padStart(2, "0")}`;
-      ctx.fillRect(20, 20, width - 40, calcHeight - 40);
+      ctx.fillRect(0, 0, width, calcHeight);
     }
   };
 
   const drawFooter = () => {
-    const footerText = settings.footerText;
-    if (footerText) {
-      const footerColor = settings.footerColor || "#000000";
-      ctx.font = `14px ${getCSSFontFamily("Pretendard-Regular")}`;
-      ctx.fillStyle = footerColor;
-      ctx.textAlign = "right";
-      const footerY = calcHeight - 35;
-      ctx.fillText(footerText, width - 35, footerY);
+    const textColor = settings.fontColor || "#000000";
+    ctx.textBaseline = "alphabetic";
+
+    if (metaLines.length) {
+      let y = metaStartY + metaMetrics.gapBefore;
+      ctx.font = `${metaMetrics.fontSize}px ${getCSSFontFamily("Pretendard-Regular")}`;
+      ctx.textAlign = "left";
+      ctx.fillStyle = textColor;
+      metaLines.forEach((line) => {
+        ctx.globalAlpha = line.alpha;
+        ctx.fillText(line.text, width * 0.1, y);
+        y += metaMetrics.lineStep;
+      });
+      ctx.globalAlpha = 1;
     }
+
+    if (isWatermarkEnabled(settings)) {
+      ctx.font = `900 ${metaMetrics.watermarkSize}px ${getCSSFontFamily("Paperozi")}`;
+      ctx.textAlign = "right";
+      ctx.fillStyle = textColor;
+      ctx.globalAlpha = 0.32;
+      ctx.fillText(WATERMARK_MARK, width - metaMetrics.watermarkInset, calcHeight - metaMetrics.watermarkInset);
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.textAlign = "left";
   };
 
   const $preview = $("<div>").addClass("image-preview-item");
@@ -3437,9 +4100,9 @@ function createHTMLSnippet(text, index) {
   const settings = extension_settings[extensionName];
   const htmlSelectedBackground = settings.selectedBackgroundImageHtml || settings.selectedBackgroundImage;
   const bgURL = resolveBackgroundURLForHTML(htmlSelectedBackground);
-  const markdownHTML = renderMarkdownHTML(text, settings);
+  const markdownHTML = renderMarkdownHTML(replaceWords(text), settings);
   const switcherTexts = getHtmlSwitcherTexts();
-  const switcherRenderedHTML = switcherTexts.map((itemText) => renderMarkdownHTML(itemText, settings));
+  const switcherRenderedHTML = switcherTexts.map((itemText) => renderMarkdownHTML(replaceWords(itemText), settings));
   const switcherUid = `tti-switch-${index}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1679616).toString(36)}`;
   const switcherBaseId = `${switcherUid}-base`;
 
@@ -3476,18 +4139,27 @@ function createHTMLSnippet(text, index) {
   const footerLayoutMode = getFooterLayoutMode(settings);
   const footerWidthPx = parsePositiveInt(settings.footerWidth, defaultSettings.footerWidth);
   const footerHeightPx = parsePositiveInt(settings.footerHeight, defaultSettings.footerHeight);
-  const rawFooterText = String(settings.footerText || "").trim();
-  const hasFooter = rawFooterText.length > 0;
+  const metaLines = getMetaLines(settings);
+  const showWatermark = isWatermarkEnabled(settings);
+  const hasMeta = metaLines.length > 0;
+  const hasFooter = hasMeta || showWatermark;
   const isScrollFooterLayout = footerLayoutMode === "scroll";
-  const contentMaxHeightValue = isScrollFooterLayout
-    ? (hasFooter ? `calc(${footerHeightPx}px - 100px)` : `calc(${footerHeightPx}px - 64px)`)
-    : "none";
+  const contentMaxHeightValue = "none";
   const containerInlineStyle = [
     "background:transparent !important",
     "box-sizing:border-box !important",
     "width:100% !important",
     `max-width:${footerWidthPx}px !important`,
-    isScrollFooterLayout ? `max-height:${footerHeightPx}px !important` : "max-height:none !important",
+    "display:grid !important",
+    "grid-template-rows:minmax(0,1fr) !important",
+    isScrollFooterLayout
+      ? `aspect-ratio:${footerWidthPx} / ${Math.max(footerWidthPx, footerHeightPx)} !important`
+      : "aspect-ratio:auto !important",
+    isScrollFooterLayout
+      ? "min-height:0 !important"
+      : `min-height:min(${footerWidthPx}px, 100vw) !important`,
+    "height:auto !important",
+    "max-height:none !important",
     "margin:0 auto !important",
     "padding:32px !important",
     "border-radius:5px !important",
@@ -3529,6 +4201,13 @@ function createHTMLSnippet(text, index) {
     "transition:transform .15s ease, background-color .15s ease !important",
   ].join(";");
   const contentInlineStyle = [
+    "grid-area:1 / 1 !important",
+    `min-height:${isScrollFooterLayout ? "0" : "min-content"} !important`,
+    "box-sizing:border-box !important",
+    "width:100% !important",
+    "margin-left:0 !important",
+    "margin-right:0 !important",
+    "padding:0 !important",
     `max-height:${contentMaxHeightValue} !important`,
     `overflow-y:${isScrollFooterLayout ? "auto" : "visible"} !important`,
     `color:${globalTextColor} !important`,
@@ -3540,43 +4219,73 @@ function createHTMLSnippet(text, index) {
     "white-space:pre-wrap !important",
     `word-break:${lineBreakByChar ? "break-all" : "break-word"} !important`,
     "overflow-wrap:anywhere !important",
-    `margin-bottom:${hasFooter ? 44 : 0}px !important`,
+    "margin-bottom:0 !important",
     `-webkit-text-stroke:${globalStrokeWidth}px ${globalTextColor} !important`,
   ].join(";");
-  const footerInlineStyle = [
-    "display:flex !important",
-    "flex-wrap:nowrap !important",
-    "gap:6px !important",
-    "width:calc(100% - 70px) !important",
-    "right:35px !important",
-    "bottom:35px !important",
-    "overflow-x:auto !important",
-    "overflow-y:hidden !important",
-    "white-space:nowrap !important",
-    "font-size:12px !important",
-    "text-align:right !important",
-  ].join(";");
-  const footerItemStyle = [
-    "display:inline-block !important",
-    "white-space:nowrap !important",
-    "padding:2px 8px !important",
-    "border-radius:999px !important",
-    `color:${settings.footerColor || "#000000"} !important`,
-    `background:${toRGBA(settings.footerBgColor || "#ffffff", 0.2)} !important`,
-    "line-height:1.4 !important",
-  ].join(";");
-  const footerTokens = rawFooterText
-    ? rawFooterText.split(",").map((token) => token.trim()).filter(Boolean)
-    : [];
   const htmlFontFace = getHtmlFontFace(settings);
-  const footerItemsHTML = footerTokens.length
-    ? footerTokens.map((token) => `<span style="${footerItemStyle}"><font face="${htmlFontFace}">${escapeHTML(token)}</font></span>`).join("")
-    : (rawFooterText
-      ? `<span style="${footerItemStyle}"><font face="${htmlFontFace}">${escapeHTML(rawFooterText)}</font></span>`
-      : "");
-  const footerHTML = hasFooter
+  const metaLineStyle = [
+    "display:block !important",
+    "margin:0 !important",
+    `color:${globalTextColor} !important`,
+    `font-size:${Math.max(10, Math.round(htmlFontSize * 28 / 38))}px !important`,
+    "line-height:1.6 !important",
+    "text-align:left !important",
+  ].join(";");
+  const metaLinesHTML = metaLines
+    .map((line) => `<span style="${metaLineStyle}opacity:${line.alpha} !important"><font face="${htmlFontFace}">${escapeHTML(line.text)}</font></span>`)
+    .join("");
+  const watermarkStyle = [
+    "position:absolute !important",
+    "right:10px !important",
+    "left:auto !important",
+    "display:block !important",
+    "width:100% !important",
+    "margin:0 !important",
+    "text-align:right !important",
+    "bottom:10px !important",
+    `color:${globalTextColor} !important`,
+    "opacity:0.32 !important",
+    "font-family:Paperozi, Pretendard-Regular, sans-serif !important",
+    `font-size:${Math.round(htmlFontSize * 42 / 38)}px !important`,
+    "font-weight:900 !important",
+    "letter-spacing:-0.01em !important",
+    "line-height:1 !important",
+  ].join(";");
+  const watermarkHTML = showWatermark
     ? `
-  <div class="tti-footer" style="${footerInlineStyle}">${footerItemsHTML}</div>`
+  <span class="tti-watermark" style="${watermarkStyle}">${WATERMARK_MARK}</span>`
+    : "";
+  const footerInlineStyle = [
+    "position:relative !important",
+    "flex:0 0 auto !important",
+    "display:flex !important",
+    "flex-direction:column !important",
+    "gap:2px !important",
+    "width:100% !important",
+    "box-sizing:border-box !important",
+    "margin-left:0 !important",
+    "margin-right:0 !important",
+    "padding:0 !important",
+    "margin-top:18px !important",
+    "z-index:3 !important",
+  ].join(";");
+  const stackInlineStyle = [
+    "grid-area:1 / 1 !important",
+    "position:relative !important",
+    "display:flex !important",
+    "flex-direction:column !important",
+    "justify-content:center !important",
+    "justify-content:safe center !important",
+    "box-sizing:border-box !important",
+    "width:100% !important",
+    "min-height:0 !important",
+    "margin:0 !important",
+    "padding:0 !important",
+    "z-index:3 !important",
+  ].join(";");
+  const footerHTML = hasMeta
+    ? `
+    <div class="tti-footer" style="${footerInlineStyle}">${metaLinesHTML}</div>`
     : "";
   const shouldRenderBg = escapedURL || useBgColor;
   const backgroundHTML = shouldRenderBg
@@ -3602,30 +4311,32 @@ ${switcherItems.map((item) => `  <input type="radio" class="tti-switch-input" na
   <div class="tti-overlay" style="${overlayInlineStyle}">${switcherDotsHTML}</div>`;
   const contentHTML = hasSwitcher
     ? `
-  <div class="tti-panels" style="margin-top: 10px;">
-    <div class="tti-content tti-panel tti-panel-base" style="${contentInlineStyle}">${markdownHTML}</div>
+    <div class="tti-panels" style="margin-top: 10px;">
+      <div class="tti-content tti-panel tti-panel-base" style="${contentInlineStyle}">${markdownHTML}</div>
 ${switcherItems.map((item) => `    <div class="tti-content tti-panel ${item.panelClass}" style="${contentInlineStyle}">${item.html}</div>`).join("\n")}
-  </div>`
+    </div>`
     : `
-  <div class="tti-content" style="${contentInlineStyle}">${markdownHTML}</div>`;
+    <div class="tti-content" style="${contentInlineStyle}">${markdownHTML}</div>`;
   const switcherRuleStyle = hasSwitcher
     ? [
+      ".tti .tti-panels{display:grid !important;min-height:0 !important;margin:0 !important;}",
       `.tti-switch-input{position:absolute !important;opacity:0 !important;pointer-events:none !important;}`,
       `.tti-panels{position:relative !important;z-index:3 !important;}`,
       `.tti-panel{display:none !important;}`,
-      `#${switcherBaseId}:checked ~ .tti-panels .tti-panel-base{display:block !important;}`,
+      `#${switcherBaseId}:checked ~ .tti-stack .tti-panels .tti-panel-base{display:block !important;}`,
       `#${switcherBaseId}:checked ~ .tti-overlay .tti-switcher-dots label[for="${switcherBaseId}"]{background:rgba(255,255,255,0.95) !important;transform:scale(1.12) !important;}`,
-      ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-panels .${item.panelClass}{display:block !important;}`),
+      ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-stack .tti-panels .${item.panelClass}{display:block !important;}`),
       ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-overlay .tti-switcher-dots label[for="${item.id}"]{background:rgba(255,255,255,0.95) !important;transform:scale(1.12) !important;}`),
     ].join("")
     : "";
-  const scopedStyle = `.tti{position:relative !important;}.tti-bg{position:absolute !important;inset:0 !important;z-index:0 !important;}.tti-overlay{position:absolute !important;inset:16px !important;z-index:2 !important;}.tti-content{position:relative !important;z-index:3 !important;}.tti-footer{position:absolute !important;z-index:4 !important;scrollbar-width:none !important;}.tti-footer>span:first-child{margin-left:auto !important;}.tti-footer::-webkit-scrollbar{height:0 !important;}${switcherRuleStyle}`;
+  const scopedStyle = `.tti{position:relative !important;}.tti-bg{position:absolute !important;inset:0 !important;z-index:0 !important;}.tti-overlay{position:absolute !important;inset:0 !important;margin:0 !important;padding:0 !important;z-index:2 !important;}.tti-content{position:relative !important;z-index:3 !important;}.tti-footer{position:relative !important;z-index:4 !important;scrollbar-width:none !important;}.tti-footer::-webkit-scrollbar{height:0 !important;}.tti-watermark{z-index:4 !important;}${switcherRuleStyle}`;
 
   return `<div>
 <style>${scopedStyle}</style>
 <div class="tti" style="${containerInlineStyle}">
 ${backgroundHTML}${switcherRadiosHTML}${overlayHTML}
-${contentHTML}${footerHTML}
+  <div class="tti-stack" style="${stackInlineStyle}">${contentHTML}${footerHTML}
+  </div>${watermarkHTML}
 </div>
 </div>`;
 }
@@ -4525,28 +5236,7 @@ function setExtractText(text, options = {}) {
     extension_settings[extensionName].fontFamily = currentCustomFont;
   }
 
-  const original1 = $("#original_word_1").val().trim();
-  const replacement1 = $("#replacement_word_1").val().trim();
-  const original2 = $("#original_word_2").val().trim();
-  const replacement2 = $("#replacement_word_2").val().trim();
-  const original3 = $("#original_word_3").val().trim();
-  const replacement3 = $("#replacement_word_3").val().trim();
-  const original4 = $("#original_word_4").val().trim();
-  const replacement4 = $("#replacement_word_4").val().trim();
-
-  if (original1 && replacement1) {
-    replaceWords();
-  }
-  if (original2 && replacement2) {
-    replaceWords();
-  }
-  if (original3 && replacement3) {
-    replaceWords();
-  }
-  if (original4 && replacement4) {
-    replaceWords();
-  }
-
+  updateTextLengthBadge();
   const forceRenderedPreview = renderPreviewForExtraction();
   if (isHtmlModeEnabled()) {
     const htmlCode = createHTMLSnippet($("#text_to_image").val() || "", 0);
@@ -4668,18 +5358,22 @@ jQuery(async () => {
     if (!$("#tti_popup_backdrop").length) {
       $("body").append('<div id="tti_popup_backdrop"></div>');
     }
+    setupReplaceRuleUI();
+    setupMetaUI();
+    setupCompositeControls();
+    setupModals();
+    setupRichTextHighlighter();
+    setupPreviewCarousel();
     await initSettings();
     presetUI();
     presetBackupSys();
     await customBG();
-    setupWordReplacer();
     setupImageConvertButton();
     setupHtmlSwitcherInputs();
     bindingFunctions();
-    setupRangeValueTooltips();
     restoreButtons();
     tabButtons();
-    botCardButtons();
+    setupMobileEditor();
     highlighterOption();
     setupSettingsPopup();
     if (extension_settings[extensionName].extMenuShortcut) {
@@ -4696,6 +5390,7 @@ function openSettingsPopup() {
 }
 
 function closeSettingsPopup() {
+  $(".tti-modal-backdrop").removeClass("open");
   $(".text-to-image-converter-settings").removeClass("tti-popup-open");
   $("#tti_popup_backdrop").removeClass("tti-popup-open");
 }
@@ -4745,7 +5440,7 @@ function bindingFunctions() {
   $("#tti_line_break").on("change", lineBreak);
   $("#tti_ratio").on("change", aspectRatio);
   $("#tti_fill_mode").on("change", bgFillMode);
-  $("#text_to_image").on("change", refreshPreview);
+  $("#text_to_image").on("input change", refreshPreview);
   $("#use_background_color").on("change", useBackgroundColor);
   $("#background_color").on("change", backgroundColor);
   $("#use_second_background_color").on("change", useSecondBackgroundColor);
@@ -4760,9 +5455,6 @@ function bindingFunctions() {
   $("#footer_layout_mode").on("change", footerLayoutMode);
   $("#footer_width").on("change", footerWidth);
   $("#footer_height").on("change", footerHeight);
-  $("#footer_text").on("change", footerText);
-  $("#footer_color").on("change", footerColor);
-  $("#footer_bg_color").on("change", footerBgColor);
   $("#upload-local-font").on("click", addLocalFont);
   $("#delete-local-font").on("click", deleteLocalFont);
   $("#preview_toggle").on("change", autoPreview);
@@ -4771,13 +5463,6 @@ function bindingFunctions() {
   $("#letter_control").on("change", letterCase);
   $("#unit_control").on("change", unitControl);
 
-  $("#how_to_use").on("click", () => {
-    $(".how_to_use_box").slideToggle();
-  });
-  $("#tti_options_gear").on("click", function () {
-    $(this).toggleClass("active");
-    $(".tti_options_box").slideToggle(200);
-  });
   $("#tti_drag_only_float").on("change", function () {
     const checked = $(this).prop("checked");
     extension_settings[extensionName].dragOnlyFloat = checked;
@@ -4811,7 +5496,8 @@ function bindingFunctions() {
     $("#preset_name").val("");
   });
   $("#clear_replace").on("click", () => {
-    $(".replacer_box").val("");
+    $("#tti_replace_list .replacer_box").val("");
+    commitReplaceRulesFromUI();
   });
 }
 
@@ -4872,11 +5558,11 @@ function organizeDialogueText(rawText) {
 
     let insertBlank;
     if (prev.type === "quote" && cur.type === "quote") {
-      insertBlank = false;
+      insertBlank = true;
     } else if (prev.type !== cur.type) {
       insertBlank = true;
     } else {
-      insertBlank = cur.precededByBlank;
+      insertBlank = true;
     }
 
     if (insertBlank) resultLines.push("");
@@ -4890,11 +5576,13 @@ function restoreButtons() {
   $("#clear_text_btn").on("click", () => {
     deletedText = $("#text_to_image").val();
     $("#text_to_image").val("");
+    syncRichEditorFromSource();
     refreshPreview();
   });
   $("#restore_text_btn").on("click", () => {
     if (deletedText !== "") {
       $("#text_to_image").val(deletedText);
+      syncRichEditorFromSource();
       refreshPreview();
       deletedText = "";
     }
@@ -4903,6 +5591,7 @@ function restoreButtons() {
     const current = $("#text_to_image").val();
     const organized = organizeDialogueText(current);
     $("#text_to_image").val(organized);
+    syncRichEditorFromSource();
 
     $("#tti_html_switcher_list .tti-html-switcher-text").each(function () {
       const $this = $(this);
@@ -4923,55 +5612,13 @@ function tabButtons() {
   });
   $(".tab-btn").first().click();
 
-  $("#custom-font-color > h4 > span").on("click", function () {
-    const CFC = $("#custom-font-color");
-    const lists = CFC.find(".font-color-lists");
-    const toggleButton = $(this);
-    lists.slideUp();
-
-    if (CFC.hasClass("hide")) {
-      lists.stop().slideDown(200);
-      CFC.removeClass("hide").addClass("opened");
-      toggleButton.text("닫기");
-    } else {
-      lists.stop().slideUp(200);
-      CFC.removeClass("opened").addClass("hide");
-      toggleButton.text("열기");
-    }
-  });
-}
-function botCardButtons() {
-  $(`.bot-data[data-type]`).on("click", function () {
-    const dataType = $(this).data("type");
-    const currentTab = $(".bot-data[data-type].active").data("type");
-    if (currentTab) {
-      cardDataTab[currentTab] = $("#text_to_image").val();
-    }
-    $(".bot-data[data-type]").removeClass("active");
-    $(this).addClass("active");
-    $("#text_to_image").val(cardDataTab[dataType] || "");
-    refreshPreview();
-  });
-  $(".bot-data.botImporter").on("click", function () {
-    if ($(this).hasClass("remover")) {
-      oriCard = null;
-      oriCardType = null;
-      Object.keys(cardDataTab).forEach(key => delete cardDataTab[key]);
-      $("#text_to_image").val("");
-      $(".bot-data[data-type]").removeClass("active");
-      $(this).removeClass("remover");  
-      $(".bot-data:not(.botImporter)").prop("disabled", true);  
-    } else {
-      loadBotCard();
-      refreshPreview();
-    }
-  });
-  $(".bot-data.botSaver").on("click", function () {
-    botCardSaver();
-    refreshPreview();
-  });
 }
 function highlighterOption() {
+  $(document).on("click", ".tti-manage-pen", function () {
+    const $item = $(this).closest(".tag-item");
+    $("#tti_pen_settings_body").empty().append($item);
+    openModal("tti_pen_settings_backdrop");
+  });
   $(document).on("click", ".add-tag-btn", addHighlightTag);
   $(document).on("click", ".delete-tag-btn", function() {
     const index = $(this).closest(".tag-item").data("index");
@@ -4980,7 +5627,8 @@ function highlighterOption() {
 
   $(document).on("input", ".tag-name", function() {
     const index = $(this).closest(".tag-item").data("index");
-    updateHighlightTag(index, "name", $(this).val());
+    updateHighlightTag(index, "label", $(this).val());
+    renderPenBar();
   });
 
   $(document).on("change", ".tag-font-family", function() {
@@ -5001,26 +5649,31 @@ function highlighterOption() {
     const index = $(this).closest(".tag-item").data("index");
     const checked = $(this).prop("checked");
     updateHighlightTag(index, "useTagFontColor", checked);
-    $(this).siblings(".tag-font-color").prop("disabled", !checked);
+    $(this).closest(".tag-color-chip").find(".tag-font-color").prop("disabled", !checked);
+    syncTagSwatch($(this).closest(".tag-item"));
   });
   $(document).on("change", ".tag-font-color", function() {
     const index = $(this).closest(".tag-item").data("index");
     updateHighlightTag(index, "fontColor", $(this).val());
+    syncTagSwatch($(this).closest(".tag-item"));
   });
 
   $(document).on("change", ".use-tag-bg-color", function() {
     const index = $(this).closest(".tag-item").data("index");
     const checked = $(this).prop("checked");
     updateHighlightTag(index, "useTagBgColor", checked);
-    $(this).siblings(".tag-bg-color").prop("disabled", !checked);
+    $(this).closest(".tag-color-chip").find(".tag-bg-color").prop("disabled", !checked);
+    syncTagSwatch($(this).closest(".tag-item"));
   });
   $(document).on("change", ".tag-bg-color", function() {
     const index = $(this).closest(".tag-item").data("index");
     updateHighlightTag(index, "bgColor", $(this).val());
+    syncTagSwatch($(this).closest(".tag-item"));
   });
 
   $(document).on("input", ".tag-font-size", function() {
     const index = $(this).closest(".tag-item").data("index");
-    updateHighlightTag(index, "fontSize", parseInt($(this).val()));
+    const value = this.valueAsNumber;
+    if (Number.isFinite(value) && value >= Number(this.min) && value <= Number(this.max)) updateHighlightTag(index, "fontSize", value);
   });
 }
