@@ -172,7 +172,7 @@
     display: grid;
     width: 30px;
     height: 30px;
-    border: 1px solid var(--ui-border);
+    border: 1px solid var(--ui-border) !important;
     border-radius: 8px;
     background: var(--ui-surface-raised);
     color: var(--ui-text-soft) !important;
@@ -201,7 +201,7 @@
 .dl_all {
     margin-left: auto;
     padding: 5px 11px;
-    border: 1px solid var(--ui-border);
+    border: 1px solid var(--ui-border) !important;
     border-radius: 999px;
     background: var(--ui-surface-raised);
     color: var(--ui-text-soft) !important;
@@ -709,7 +709,7 @@
     min-height: 40px;
     margin: 0;
     padding: 0 12px;
-    border: 1px solid var(--ui-border);
+    border: 1px solid var(--ui-border) !important;
     border-radius: 10px;
     background: var(--ui-surface);
     color: var(--ui-text-muted) !important;
@@ -756,7 +756,7 @@
     width: 74px;
     height: 74px;
     margin: 0 0 0 16px;
-    border: 1px solid var(--ui-border);
+    border: 1px solid var(--ui-border) !important;
     border-radius: 14px;
     background: var(--ui-surface);
     color: var(--ui-text-muted) !important;
@@ -1111,7 +1111,7 @@
     display: grid;
     width: 36px;
     height: 36px;
-    border: 1px solid var(--ui-border-strong);
+    border: 1px solid var(--ui-border-strong) !important;
     border-radius: 6px;
     font-size: 11px !important;
     font-weight: 700;
@@ -1187,7 +1187,7 @@
     display: grid;
     align-items: center;
     padding: 12px 14px;
-    border: 1px solid var(--ui-border);
+    border: 1px solid var(--ui-border) !important;
     border-radius: 12px;
     background: var(--ui-surface);
     grid-template-columns: minmax(0, 1fr) 38px;
@@ -1208,7 +1208,7 @@
     flex: 0 0 auto;
     width: 30px;
     height: 30px;
-    border: 1px solid var(--ui-border-strong);
+    border: 1px solid var(--ui-border-strong) !important;
     border-radius: 8px;
     font-size: 13px !important;
     font-weight: 800;
@@ -1240,7 +1240,7 @@
     align-items: center;
     margin: 0;
     padding: 4px 9px;
-    border: 1px solid var(--ui-border);
+    border: 1px solid var(--ui-border) !important;
     border-radius: 999px;
     background: var(--ui-surface-raised);
     color: var(--ui-text-muted) !important;
@@ -1326,7 +1326,7 @@
     display: grid;
     align-items: center;
     padding: 10px 12px;
-    border: 1px solid var(--ui-border);
+    border: 1px solid var(--ui-border) !important;
     border-radius: 11px;
     grid-template-columns: minmax(0, 1fr) 34px;
     grid-template-areas:
@@ -1586,7 +1586,7 @@
     max-height: calc(100vh - 40px);
     max-height: calc(100dvh - 40px);
     padding: 0 22px 4px;
-    border: 1px solid var(--ui-border);
+    border: 1px solid var(--ui-border) !important;
     border-radius: 18px;
     background: var(--ui-panel);
     color: var(--ui-text);
@@ -1777,7 +1777,7 @@
 .tti-preset-current {
     display: grid;
     padding: 14px 16px;
-    border: 1px solid var(--ui-border);
+    border: 1px solid var(--ui-border) !important;
     border-radius: 12px;
     background: var(--ui-surface);
     gap: 4px;
@@ -1812,7 +1812,7 @@
     align-items: center;
     margin-bottom: 10px;
     padding: 10px 12px;
-    border: 1px solid var(--ui-border);
+    border: 1px solid var(--ui-border) !important;
     border-radius: 12px;
     background: var(--ui-surface);
     gap: 10px;
@@ -1858,7 +1858,7 @@
 .tti-pen > i.tti-pen-dot {
     width: 14px;
     height: 14px;
-    border: 1px solid rgba(128, 128, 128, 0.4);
+    border: 1px solid rgba(128, 128, 128, 0.4) !important;
     border-radius: 4px;
 }
 .tti-pen-empty {
@@ -1945,7 +1945,7 @@
     width: max-content;
     height: 48px;
     padding: 4px 6px;
-    border: 1px solid var(--ui-border-strong);
+    border: 1px solid var(--ui-border-strong) !important;
     border-radius: 13px;
     background: var(--ui-surface-raised);
     color: var(--ui-text);
@@ -2027,7 +2027,7 @@
     position: absolute;
     left: 50%;
     padding: 8px 10px;
-    border: 1px solid var(--ui-border-strong);
+    border: 1px solid var(--ui-border-strong) !important;
     border-radius: 999px;
     background: var(--ui-surface-raised);
     transform: translateX(-50%);
@@ -2066,7 +2066,7 @@
 .html-switcher-inputs {
     margin-top: 16px;
     padding: 14px;
-    border: 1px solid var(--ui-border);
+    border: 1px solid var(--ui-border) !important;
     border-radius: 12px;
     background: var(--ui-surface);
 }
@@ -2268,7 +2268,7 @@
     width: min(250px, calc(100vw - 32px));
     max-height: min(340px, calc(100vh - 28px));
     padding: 7px;
-    border: 1px solid var(--ui-border-strong);
+    border: 1px solid var(--ui-border-strong) !important;
     border-radius: 13px;
     background: var(--ui-surface-raised);
     transform: translateX(-50%);
@@ -2815,7 +2815,7 @@
     .tti-mobile-ready .tti-preview-pane {
         min-height: 0;
         padding: 6px 8px;
-        border: 0;
+        border: 0 !important;
         overflow: hidden;
         scrollbar-gutter: auto;
     }
@@ -2864,7 +2864,7 @@
         height: 0;
         min-height: 0;
         padding: 0;
-        border: 1px solid var(--ui-border);
+        border: 1px solid var(--ui-border) !important;
         border-radius: 20px 20px 0 0;
         overflow: hidden;
         inset: auto 0 0;
@@ -2884,7 +2884,7 @@
         width: 100%;
         height: 24px;
         padding: 0;
-        border: 0;
+        border: 0 !important;
         background: transparent;
         cursor: ns-resize;
         place-items: center;
@@ -2907,7 +2907,7 @@
         min-width: 44px;
         min-height: 36px;
         margin-left: 4px;
-        border: 0;
+        border: 0 !important;
         border-radius: 10px;
         background: var(--ui-surface);
         color: var(--ui-text-soft);
@@ -2980,7 +2980,7 @@
         min-width: 0;
         min-height: 48px;
         padding: 6px 2px;
-        border: 0;
+        border: 0 !important;
         border-radius: 12px;
         background: transparent;
         color: var(--ui-text-soft);
