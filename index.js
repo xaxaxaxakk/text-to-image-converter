@@ -70,8 +70,8 @@ const defaultSettings = {
     fontFamily: "Pretendard-Regular",
     fontWeight: "normal",
     htmlFontFace: "Ridibatang",
-    fontSize: 32,
-    fontSizeImage: 32,
+    fontSize: 38,
+    fontSizeImage: 38,
     fontSizeHtml: 14,
     fontSpacing: 0,
     fontLineHeight: 1.5,
@@ -506,10 +506,10 @@ function resolveMetaText(mode, customValue, defaultValue) {
 const WATERMARK_MARK = "READER.";
 const SHARE_REFERENCE_WIDTH = 1080;
 const SHARE_LAYOUT = {
-    paddingTop: 130,
-    paddingBottom: 130,
-    paddingBottomMeta: 160,
-    metaGap: 24,
+    paddingTop: 200,
+    paddingBottom: 200,
+    paddingBottomMeta: 200,
+    metaGap: 0,
 };
 function getMetaMetrics(width) {
     const scale = width / SHARE_REFERENCE_WIDTH;
