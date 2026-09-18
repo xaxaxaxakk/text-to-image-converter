@@ -76,6 +76,7 @@ const defaultSettings = {
     fontSpacing: 0,
     fontLineHeight: 1.5,
     fontAlign: "left",
+    textIndent: false,
     fontColor: "#000000",
     useItalicColor: false,
     italicFontColor: "#000000",
@@ -677,7 +678,7 @@ async function initSettings() {
         store.chatTitleMode = normalizeMetaMode(store.chatTitleMode);
         store.charNameMode = normalizeMetaMode(store.charNameMode);
     }
-    const {fontFamily, fontSizeImage, fontSizeHtml, htmlFontFace, fontSpacing, fontLineHeight, fontAlign, fontColor, useItalicColor, italicFontColor, useBoldColor, boldFontColor, useBoldItalicColor, boldItalicFontColor, useStrikethroughColor, strikethroughFontColor, useUnderlineColor, underlineFontColor, useQuotesColor, quotesFontColor, blockquoteFontColor, blockquoteBgColor, blockquoteBorderColor, strokeWidth, lineBreak, imageRatio, imageFillMode, useBackgroundColor, backgroundColor, useSecondBackgroundColor, secondBackgroundColor, bgBlur, bgBrightness, bgHue, bgGrayscale, bgNoise, overlayOpacity, overlayColor, currentPreset, footerLayoutMode, footerWidth, footerHeight, autoPreview, htmlMode, letterCase, unitControl, dragOnlyFloat, extMenuShortcut, mesButtonEnabled, autoOrganize} = extension_settings[extensionName];
+    const {fontFamily, fontSizeImage, fontSizeHtml, htmlFontFace, fontSpacing, fontLineHeight, fontAlign, textIndent, fontColor, useItalicColor, italicFontColor, useBoldColor, boldFontColor, useBoldItalicColor, boldItalicFontColor, useStrikethroughColor, strikethroughFontColor, useUnderlineColor, underlineFontColor, useQuotesColor, quotesFontColor, blockquoteFontColor, blockquoteBgColor, blockquoteBorderColor, strokeWidth, lineBreak, imageRatio, imageFillMode, useBackgroundColor, backgroundColor, useSecondBackgroundColor, secondBackgroundColor, bgBlur, bgBrightness, bgHue, bgGrayscale, bgNoise, overlayOpacity, overlayColor, currentPreset, footerLayoutMode, footerWidth, footerHeight, autoPreview, htmlMode, letterCase, unitControl, dragOnlyFloat, extMenuShortcut, mesButtonEnabled, autoOrganize} = extension_settings[extensionName];
 
     $("#tti_font_family").val(fontFamily);
     $("#tti_font_size_image").val(fontSizeImage);
@@ -686,6 +687,7 @@ async function initSettings() {
     $("#tti_letter_spacing").val(fontSpacing);
     $("#tti_line_height").val(fontLineHeight);
     $("#tti_font_align").val(fontAlign);
+    $("#tti_text_indent").prop("checked", !!textIndent);
     $("#tti_font_color").val(fontColor);
     $("#use_italic_color").prop("checked", useItalicColor);
     $("#tti_italic_font_color").val(italicFontColor);
@@ -902,6 +904,7 @@ function deletePreset() {
         $("#tti_letter_spacing").val(defaultSettings.fontSpacing);
         $("#tti_line_height").val(defaultSettings.fontLineHeight);
         $("#tti_font_align").val(defaultSettings.fontAlign);
+        $("#tti_text_indent").prop("checked", defaultSettings.textIndent);
         $("#tti_font_color").val(defaultSettings.fontColor);
         $("#use_italic_color").prop("checked", defaultSettings.useItalicColor);
         $("#tti_italic_font_color").val(defaultSettings.italicFontColor);
@@ -1003,6 +1006,7 @@ function selectPreset() {
         $("#tti_letter_spacing").val(defaultSettings.fontSpacing);
         $("#tti_line_height").val(defaultSettings.fontLineHeight);
         $("#tti_font_align").val(defaultSettings.fontAlign);
+        $("#tti_text_indent").prop("checked", defaultSettings.textIndent);
         $("#tti_font_color").val(defaultSettings.fontColor);
         $("#use_italic_color").prop("checked", defaultSettings.useItalicColor);
         $("#tti_italic_font_color").val(defaultSettings.italicFontColor);
@@ -1104,6 +1108,9 @@ function applyPreset(presetName) {
                 break;
             case "fontAlign":
                 $("#tti_font_align").val(value);
+                break;
+            case "textIndent":
+                $("#tti_text_indent").prop("checked", !!value);
                 break;
             case "fontColor":
                 $("#tti_font_color").val(value);
@@ -2111,6 +2118,11 @@ function fontLineHeight(event) {
 }
 function fontAlign(event) {
     extension_settings[extensionName].fontAlign = event.target.value;
+    debouncedSaveSettings();
+    refreshPreview();
+}
+function textIndent(event) {
+    extension_settings[extensionName].textIndent = event.target.checked;
     debouncedSaveSettings();
     refreshPreview();
 }
@@ -3547,6 +3559,7 @@ function wrappingTexts(text, mode = "word") {
     const maxWidth = width * 0.8;
     const fontSize = getActiveFontSize(settings);
     const lineHeight = fontSize * parseFloat(settings.fontLineHeight);
+    const indentSize = settings.textIndent ? fontSize : 0;
 
     const fullSize = settings.imageRatio === "full";
     const reserve = getVerticalReserve(width, getMetaLines(settings).length, fontSize);
@@ -3635,7 +3648,9 @@ function wrappingTexts(text, mode = "word") {
                 ctx.letterSpacing = `${settings.fontSpacing}em`;
                 const unitWidth = ctx.measureText(unit).width;
 
-                if (currentLineWidth + unitWidth <= lineMaxWidth) {
+                const availableWidth = lineMaxWidth - (wrapLine.length === 0 ? indentSize : 0);
+
+                if (currentLineWidth + unitWidth <= availableWidth) {
                     currentLine.push({
                         text: unit,
                         bold: span.bold,
@@ -3700,6 +3715,8 @@ function wrappingTexts(text, mode = "word") {
             });
             wrapLine[wrapLine.length - 1].softBreak = false;
         }
+
+        if (wrapLine.length) wrapLine[0].paraStart = true;
 
         if (!fullSize && lineCount + wrapLine.length > maxLines && currentPage.length > 0) {
             pages.push(currentPage);
@@ -3773,6 +3790,7 @@ function generateTextImage(chunk, index) {
         const spare = Math.max(0, calcHeight - reserve.total - totalTextHeight);
         let y = reserve.top + spare / 2 + fontSize;
         const setAlign = settings.fontAlign || "left";
+        const indentSize = settings.textIndent ? fontSize : 0;
 
         const lineBreak = settings.lineBreak || "byWord";
         const maxLineWidth = width * 0.8;
@@ -3860,10 +3878,10 @@ function generateTextImage(chunk, index) {
 
             return textWidth;
         }
-        function getAlignedX(totalTextWidth) {
-            if (setAlign === "center") return width / 2 - totalTextWidth / 2;
+        function getAlignedX(totalTextWidth, indent = 0) {
+            if (setAlign === "center") return width / 2 - totalTextWidth / 2 + indent / 2;
             if (setAlign === "right") return width * 0.9 - totalTextWidth;
-            return width * 0.1;
+            return width * 0.1 + indent;
         }
         function isHrRenderLine(lineData) {
             if (!lineData) return false;
@@ -3911,7 +3929,7 @@ function generateTextImage(chunk, index) {
                     totalTextWidth += width;
                 });
 
-                let alignX = getAlignedX(totalTextWidth);
+                let alignX = getAlignedX(totalTextWidth, line.paraStart ? indentSize : 0);
 
                 ctx.textAlign = "left";
                 let x = alignX;
@@ -3952,10 +3970,11 @@ function generateTextImage(chunk, index) {
                     totalTextWidth += width;
                 });
 
-                let alignX = getAlignedX(totalTextWidth);
+                const lineIndent = lineObj.paraStart ? indentSize : 0;
+                let alignX = getAlignedX(totalTextWidth, lineIndent);
 
                 const gapCount = line.length - 1;
-                const spacing = gapCount > 0 && shouldJustify ? (maxLineWidth - totalTextWidth) / gapCount : 0;
+                const spacing = gapCount > 0 && shouldJustify ? (maxLineWidth - lineIndent - totalTextWidth) / gapCount : 0;
 
                 let x = alignX;
                 line.forEach((span, i) => {
@@ -4342,6 +4361,7 @@ function buildSpanStyle(span, settings) {
 function renderMarkdownHTML(text, settings) {
     const lines = String(text || "").split(/\n/);
     const htmlFontFace = getHtmlFontFace(settings);
+    const indentHTML = settings.textIndent ? `<span style="display:inline-block !important;width:1em !important;height:0 !important;"></span>` : "";
     const renderLineHTML = (lineText, isBlockquoteLine = false) => {
         let spans = enableMarkdown(lineText);
         if (isBlockquoteLine) {
@@ -4394,7 +4414,7 @@ function renderMarkdownHTML(text, settings) {
             i = j - 1;
             continue;
         }
-        htmlLines.push(renderLineHTML(line));
+        htmlLines.push(`${trimmedLine ? indentHTML : ""}${renderLineHTML(line)}`);
     }
 
     return htmlLines.join("\n");
@@ -5579,6 +5599,7 @@ function bindingFunctions() {
     $("#tti_letter_spacing").on("change", fontSpacing);
     $("#tti_line_height").on("change", fontLineHeight);
     $("#tti_font_align").on("change", fontAlign);
+    $("#tti_text_indent").on("change", textIndent);
     $("#tti_font_color").on("change", fontColor);
     $("#use_italic_color").on("change", useItalicColor);
     $("#tti_italic_font_color").on("change", italicFontColor);
