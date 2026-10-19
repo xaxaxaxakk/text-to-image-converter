@@ -681,6 +681,23 @@
     display: flex;
     gap: 8px;
 }
+.tti-sb-row {
+    align-items: center;
+}
+.tti-sb-row > label {
+    flex: 0 0 auto;
+}
+.tti-sb-row .tti-sb-theme {
+    flex: 1 1 auto;
+    min-width: 0;
+    grid-template-columns: repeat(3, 1fr);
+}
+.tti-sb-theme.disabled {
+    opacity: 0.45;
+}
+.tti-sb-theme.disabled button {
+    cursor: not-allowed;
+}
 .tti-mode-switches .tti-html-switch {
     display: flex !important;
     align-items: center !important;
@@ -1519,6 +1536,8 @@
 /* ---------- HTML 모드 표시 제어 ---------- */
 .html-mode-hidden,
 .html-mode-only,
+.sb-mode-hidden,
+.sb-mode-only,
 .footer-scroll-only-hidden {
     display: none !important;
 }
@@ -2932,6 +2951,7 @@
     }
     .tti-mobile-ready .tti-mobile-scroll > .tti-primary-actions,
     .tti-mobile-ready .tti-mobile-scroll > .preset-section,
+    .tti-mobile-ready .tti-mobile-scroll > .tti-sb-section,
     .tti-mobile-ready .tti-mobile-scroll > .background-picker,
     .tti-mobile-ready .tti-mobile-scroll > .tab-container {
         display: none;
@@ -2960,7 +2980,8 @@
         font-style: normal;
     }
     .tti-mobile-ready[data-mobile-category="other"] .tti-mobile-scroll > .tti-primary-actions,
-    .tti-mobile-ready[data-mobile-category="other"] .tti-mobile-scroll > .preset-section {
+    .tti-mobile-ready[data-mobile-category="other"] .tti-mobile-scroll > .preset-section,
+    .tti-mobile-ready[data-mobile-category="other"] .tti-mobile-scroll > .tti-sb-section {
         display: block;
     }
     .tti-mobile-ready[data-mobile-category="other"] .tab-container {
