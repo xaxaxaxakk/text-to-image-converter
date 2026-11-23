@@ -54,8 +54,19 @@ async function fetchExtensionResource(fileName) {
 async function fetchExtensionText(fileName) {
     return (await fetchExtensionResource(fileName)).text();
 }
+const extensionJSONCache = new Map();
 async function fetchExtensionJSON(fileName) {
-    return (await fetchExtensionResource(fileName)).json();
+    if (!extensionJSONCache.has(fileName)) {
+        const promise = fetchExtensionResource(fileName)
+            .then((response) => response.json())
+            .catch((error) => {
+                extensionJSONCache.delete(fileName);
+                throw error;
+            });
+        extensionJSONCache.set(fileName, promise);
+    }
+    const data = await extensionJSONCache.get(fileName);
+    return Array.isArray(data) ? [...data] : data;
 }
 
 const debouncedSaveSettings = debounce(() => saveSettings(), 200);
@@ -68,6 +79,8 @@ const FileSaverCDN = "https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/
 
 const extensionName = "text-to-image-converter";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
+const settingsHtmlPromise = fetchExtensionText("settings.html");
+settingsHtmlPromise.catch(() => {});
 const defaultSettings = {
     uiTheme: "light",
     fontFamily: "Pretendard-Regular",
@@ -708,7 +721,7 @@ function setupRangeValueTooltips() {
     });
 }
 
-async function initSettings() {
+function initSettings() {
     extension_settings[extensionName] = {...defaultSettings, ...extension_settings[extensionName]};
     applyWebFonts();
     applyExtensionTheme();
@@ -4551,7 +4564,7 @@ function toggleExtMenuShortcutButton(show) {
 
 jQuery(async () => {
     try {
-        const settingsHtml = await fetchExtensionText("settings.html");
+        const settingsHtml = await settingsHtmlPromise;
         $("body").append(settingsHtml);
         if (!$("#tti_popup_backdrop").length) {
             $("body").append('<div id="tti_popup_backdrop"></div>');
@@ -4562,10 +4575,9 @@ jQuery(async () => {
         setupModals();
         setupRichTextHighlighter();
         setupPreviewCarousel();
-        await initSettings();
+        initSettings();
         presetUI();
         presetBackupSys();
-        await customBG();
         setupImageConvertButton();
         setupHtmlSwitcherInputs();
         bindingFunctions();
@@ -4581,6 +4593,9 @@ jQuery(async () => {
         if (extension_settings[extensionName].extMenuShortcut) {
             toggleExtMenuShortcutButton(true);
         }
+        customBG().catch((error) => {
+            console.warn("[text-to-image-converter] 커스텀 배경 로드 실패:", error);
+        });
     } catch (error) {
         console.error("[text-to-image-converter] 초기화 실패:", error);
     }
