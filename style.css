@@ -301,6 +301,34 @@
     max-height: min(64dvh, 660px);
     border-radius: 4px;
     object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+.tti-image-scroll {
+    display: block;
+}
+.image-preview-item.is-tall-scroll {
+    width: var(--tti-scroll-width);
+    max-width: 100%;
+}
+.image-preview-item.is-tall-scroll .tti-image-scroll {
+    width: 100%;
+    max-height: var(--tti-scroll-height);
+    border-radius: 4px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    scrollbar-width: thin;
+}
+.image-preview-item.is-tall-scroll img {
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    border-radius: 0;
+    object-fit: unset;
 }
 .image-preview-item.html-preview-item {
     width: min(560px, 100%);
@@ -319,6 +347,7 @@
     position: absolute;
     top: 8px;
     right: 8px;
+    z-index: 2;
     padding: 5px 11px;
     border: 0 !important;
     border-radius: 999px;
@@ -1444,17 +1473,87 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
+    padding: 0;
+    border: 0 !important;
+    border-radius: 0;
+    background: transparent;
+    gap: 0;
 }
 .tti-pen-settings-modal .tti-manage-pen {
     display: none !important;
 }
 .tti-pen-settings-modal .tag-card-preview {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+    padding: 18px 16px;
+    border: 1px solid var(--ui-border) !important;
+    border-radius: 12px;
+    background: var(--ui-surface);
     text-align: center;
-    border-bottom: 1px solid var(--ui-border);
+}
+.tti-pen-settings-modal .tag-item-left {
+    display: block;
+}
+.tti-pen-settings-modal .tag-item-left > .tti-field {
+    gap: 12px;
+}
+.tti-pen-settings-modal .tag-item-left > .tti-field:last-child {
+    border-bottom: 0;
+}
+.tti-pen-settings-modal .tag-item-left > .tti-field > span {
+    flex: 0 0 58px;
+}
+.tti-pen-settings-modal .tag-item-left > .tti-field > input[type="text"],
+.tti-pen-settings-modal .tag-item-left > .tti-field > .tti-select-trigger {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.tti-pen-settings-modal .tag-size-control {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    min-width: 0;
+    gap: 8px;
+}
+.tti-pen-settings-modal .tag-size-mode {
+    flex: 0 0 auto;
+    grid-template-columns: repeat(2, 1fr);
+}
+.tti-pen-settings-modal .tag-size-mode button {
+    padding: 0 14px;
+    white-space: nowrap;
+}
+.tti-pen-settings-modal .tag-font-size {
+    flex: 0 0 68px;
+    width: 68px !important;
+    height: 34px !important;
+    text-align: center;
+}
+.tti-pen-settings-modal .tag-font-size[hidden] {
+    display: none;
+}
+.tti-pen-settings-modal .tti-inline-color {
+    gap: 8px;
+}
+.tti-pen-settings-modal .tti-inline-color input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    margin: 0;
+    accent-color: var(--ui-accent);
+    cursor: pointer;
 }
 .tti-pen-settings-modal .delete-tag-btn {
-    align-self: flex-end;
+    display: inline-flex !important;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 40px;
+    min-height: 40px !important;
+    margin-top: 12px;
+    padding: 0 14px !important;
+    font-size: 13px !important;
+    gap: 7px;
 }
 .tti-color-input-group {
     display: inline-flex !important;
@@ -1481,12 +1580,8 @@
 .tti-replace-option-row {
     display: flex;
     align-items: center;
-    padding-bottom: 12px;
-    color: var(--ui-text-soft);
-    font-size: 13px !important;
-    font-weight: 800;
+    margin-bottom: 8px;
     gap: 12px;
-    border-bottom: 1px solid var(--ui-border);
 }
 
 /* ---------- 이미지 정보 표시 ---------- */
@@ -1965,61 +2060,43 @@
     -webkit-box-decoration-break: clone;
 }
 .tti-highlight-float {
-    display: none;
-    align-items: center;
-    position: fixed;
-    z-index: 100003;
-    width: max-content;
-    height: 48px;
-    padding: 4px 6px;
-    border: 1px solid var(--ui-border-strong) !important;
-    border-radius: 13px;
-    background: var(--ui-surface-raised);
-    color: var(--ui-text);
-    gap: 3px;
-    box-shadow: var(--ui-shadow);
-}
-.tti-highlight-float.is-visible {
     display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 44px;
+    margin-bottom: 10px;
+    padding: 5px 10px;
+    border: 1px solid var(--ui-border) !important;
+    border-radius: 12px;
+    background: var(--ui-surface);
+    color: var(--ui-text);
+    gap: 8px;
 }
-.tti-highlight-float.placement-top {
-    transform: translate(-50%, -100%);
+.tti-highlight-label {
+    display: inline-grid;
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    color: var(--ui-text-muted);
+    font-size: 13px !important;
+    place-items: center;
 }
-.tti-highlight-float.placement-bottom {
-    transform: translate(-50%, 0);
-}
-.tti-highlight-float::after {
-    position: absolute;
-    left: 50%;
-    width: 9px;
-    height: 9px;
-    background: var(--ui-surface-raised);
-    transform: translateX(-50%) rotate(45deg);
-    content: "";
-}
-.tti-highlight-float.placement-top::after {
-    bottom: -5px;
-    border-right: 1px solid var(--ui-border-strong);
-    border-bottom: 1px solid var(--ui-border-strong);
-}
-.tti-highlight-float.placement-bottom::after {
-    top: -5px;
-    border-top: 1px solid var(--ui-border-strong);
-    border-left: 1px solid var(--ui-border-strong);
+.tti-highlight-float:not(.has-selection) .tti-highlight-action,
+.tti-highlight-float:not(.has-selection) .tti-highlight-palette button {
+    opacity: 0.45;
 }
 .tti-highlight-action {
     display: flex;
+    flex: 0 0 auto;
     justify-content: center;
     align-items: center;
-    position: relative;
-    z-index: 1;
-    height: 38px;
-    padding: 0 9px;
-    border: 0 !important;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--ui-border) !important;
     border-radius: 9px;
-    background: transparent !important;
+    background: var(--ui-surface-raised) !important;
     color: var(--ui-text) !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
     font-weight: 700;
     cursor: pointer;
     gap: 5px;
@@ -2031,44 +2108,37 @@
     color: var(--ui-danger) !important;
 }
 .tti-highlight-color-control {
-    display: grid;
-    position: relative;
-    z-index: 3;
-    width: 38px;
-    height: 38px;
-    place-items: center;
+    display: flex;
+    flex: 1 1 0;
+    align-items: center;
+    min-width: 0;
+    height: 36px;
+    padding: 4px 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
 }
-.tti-highlight-color,
+.tti-highlight-color-control::-webkit-scrollbar {
+    display: none;
+}
+.tti-highlight-palette {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 .tti-highlight-palette button {
-    width: 23px;
-    height: 23px;
+    flex: 0 0 auto;
+    width: 24px;
+    height: 24px;
     padding: 0;
     border: 2px solid color-mix(in srgb, var(--ui-text) 32%, transparent) !important;
     border-radius: 50%;
     background: var(--palette-color) !important;
     cursor: pointer;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+    transition: transform 0.12s ease, opacity 0.12s ease;
 }
-.tti-highlight-palette {
-    display: none;
-    position: absolute;
-    left: 50%;
-    padding: 8px 10px;
-    border: 1px solid var(--ui-border-strong) !important;
-    border-radius: 999px;
-    background: var(--ui-surface-raised);
-    transform: translateX(-50%);
-    gap: 8px;
-    box-shadow: var(--ui-shadow);
-}
-.tti-highlight-float.palette-open .tti-highlight-palette {
-    display: flex;
-}
-.tti-highlight-float.placement-top .tti-highlight-palette {
-    bottom: calc(100% + 8px);
-}
-.tti-highlight-float.placement-bottom .tti-highlight-palette {
-    top: calc(100% + 8px);
+.tti-highlight-palette button:hover {
+    transform: scale(1.12);
 }
 .tti-highlight-palette button.active {
     outline: 2px solid var(--ui-text);
@@ -2390,7 +2460,7 @@
 @font-face {
     font-family: "Pretendard-Regular";
     font-weight: 400;
-    src: url("https://cdn.jsdelivr.net/gh/fonts-archive/Pretendard@main/Pretendard-Regular.woff2") format("woff");
+    src: url("https://cdn.jsdelivr.net/gh/fonts-archive/Pretendard@main/Pretendard-Regular.woff2") format("woff2");
     font-style: normal;
 }
 @font-face {
@@ -2815,7 +2885,9 @@
 }
 
 .tti-mobile-bar,
-.tti-mobile-sheet-header {
+.tti-mobile-sheet-header,
+.tti-mobile-share-btn,
+.tti-mobile-save-menu {
     display: none;
 }
 .tti-mobile-scroll {
@@ -2823,6 +2895,12 @@
 }
 
 @media (max-width: 1000px) {
+    .tti-modal-backdrop {
+        height: var(--tti-vvh, 100dvh);
+    }
+    .tti-modal {
+        max-height: calc(var(--tti-vvh, 100dvh) - 32px);
+    }
     .tti-mobile-ready {
         grid-template-rows: 48px minmax(0, 1fr) auto;
     }
@@ -2835,16 +2913,31 @@
     }
     .tti-mobile-ready[data-mobile-sheet="half"] .tti-editor-controls {
         height: 48%;
+        transition:
+            height 0.22s cubic-bezier(0.2, 0.8, 0.3, 1),
+            visibility 0s;
     }
     .tti-mobile-ready[data-mobile-sheet="expanded"] .tti-editor-controls {
         height: 82%;
+        transition:
+            height 0.22s cubic-bezier(0.2, 0.8, 0.3, 1),
+            visibility 0s;
+    }
+    .tti-mobile-ready .tti-editor-controls.tti-dragging {
+        transition: none !important;
     }
     .tti-mobile-ready .tti-preview-pane {
+        height: 100%;
         min-height: 0;
         padding: 6px 8px;
         border: 0 !important;
         overflow: hidden;
+        transition: height 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
         scrollbar-gutter: auto;
+    }
+    .tti-mobile-ready[data-mobile-sheet="half"] .tti-preview-pane {
+        height: 52%;
+        align-self: start;
     }
     .tti-mobile-ready .tti-preview-pane h4 {
         flex: 0 0 auto;
@@ -2852,6 +2945,23 @@
         margin: 0 0 4px !important;
         padding: 0 4px;
         font-size: 11px !important;
+    }
+    .tti-mobile-share-btn {
+        display: inline-grid;
+        width: 28px;
+        height: 28px;
+        margin-left: 6px;
+        padding: 0;
+        border: 1px solid var(--ui-border) !important;
+        border-radius: 8px;
+        background: var(--ui-surface) !important;
+        color: var(--ui-text-soft) !important;
+        font-size: 12px !important;
+        cursor: pointer;
+        place-items: center;
+    }
+    .tti-mobile-share-btn[hidden] {
+        display: none;
     }
     .tti-mobile-ready .tti-preview-stage {
         padding: 0 32px 30px;
@@ -2894,6 +3004,9 @@
         border: 1px solid var(--ui-border) !important;
         border-radius: 20px 20px 0 0;
         overflow: hidden;
+        transition:
+            height 0.22s cubic-bezier(0.2, 0.8, 0.3, 1),
+            visibility 0s linear 0.22s;
         inset: auto 0 0;
         border-bottom: 0;
         box-shadow: 0 -6px 24px #00000010;
@@ -2901,6 +3014,43 @@
     }
     .tti-mobile-ready[data-mobile-sheet="closed"] .tti-editor-controls {
         visibility: hidden;
+    }
+    .tti-mobile-save-menu {
+        display: grid;
+        position: absolute;
+        right: max(10px, env(safe-area-inset-right));
+        bottom: calc(68px + env(safe-area-inset-bottom));
+        z-index: 5;
+        min-width: 176px;
+        padding: 6px;
+        border: 1px solid var(--ui-border-strong) !important;
+        border-radius: 14px;
+        background: var(--ui-surface-raised);
+        gap: 4px;
+        box-shadow: var(--ui-shadow);
+    }
+    .tti-mobile-save-menu[hidden] {
+        display: none;
+    }
+    .tti-mobile-save-menu button {
+        display: flex;
+        align-items: center;
+        min-height: 40px;
+        padding: 0 12px;
+        border: 0 !important;
+        border-radius: 10px;
+        background: transparent !important;
+        color: var(--ui-text) !important;
+        font-size: 13px !important;
+        font-weight: 700;
+        text-align: left;
+        cursor: pointer;
+        gap: 9px;
+    }
+    .tti-mobile-save-menu button:active,
+    .tti-mobile-save-menu button:hover {
+        background: var(--ui-hover) !important;
+        color: var(--ui-accent) !important;
     }
     .tti-mobile-sheet-header {
         display: block;
@@ -3039,7 +3189,11 @@
         outline-offset: -2px;
     }
     #tti_text_modal_backdrop .tti-bottom-sheet {
-        max-height: 92dvh;
+        max-height: min(92dvh, calc(var(--tti-vvh, 100dvh) - 16px));
+    }
+    #tti_text_modal_backdrop .tti-rich-text-editor {
+        height: min(38dvh, 320px);
+        min-height: 150px;
     }
 }
 
